@@ -4,13 +4,20 @@
 #include <sstream>
 #include <sysexits.h>
 
-bool had_error = false;
+#include "error.h"
+#include "scanner.h"
+#include "token.h"
 
+namespace lox
+{
 void
 run (const std::string &source)
 {
-  // TODO
-  std::cout << source;
+  Scanner scanner{ source };
+  auto tokens = scanner.scan_tokens ();
+  for (const auto &t : tokens)
+    std::cout << t.to_string ();
+  std::cout << std::endl;
 }
 
 void
@@ -32,7 +39,10 @@ run_prompt ()
       if (line.empty ())
         break;
       run (line);
+      had_error = false;
     }
+}
+
 }
 
 int
@@ -44,9 +54,9 @@ main (int argc, char **argv)
       std::exit (EX_USAGE);
     }
   else if (argc == 2)
-    run_script (argv[1]);
+    lox::run_script (argv[1]);
   else
-    run_prompt ();
+    lox::run_prompt ();
 
-  return had_error ? EX_DATAERR : EX_OK;
+  return lox::had_error ? EX_DATAERR : EX_OK;
 }

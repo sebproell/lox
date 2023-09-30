@@ -1,0 +1,5 @@
+Checks: >-
+  -*,
+  modernize-*,
+  bugprone-*,
+  -modernize-use-trailing-return-type
