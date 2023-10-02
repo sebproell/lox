@@ -1,2 +1,2 @@
 [line 2] Error: Unterminated string
-TOK_EOF  
+{TOK_EOF }

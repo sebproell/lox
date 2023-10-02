@@ -1,0 +1,1 @@
+{IF if}{IDENTIFIER a}{ELSE else}{IDENTIFIER end}{TOK_EOF }
