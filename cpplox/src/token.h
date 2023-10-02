@@ -8,6 +8,7 @@ namespace lox
 {
 enum class TokenType
 {
+  INVALID,
   // Single-character tokens.
   LEFT_PAREN,
   RIGHT_PAREN,
@@ -59,7 +60,13 @@ enum class TokenType
 
 std::string to_string (const TokenType &t);
 
-using Literal = std::variant<std::monostate, std::string>;
+/**
+ * Return the correct keyword token if the given @p text is indeed a keyword.
+ * Otherwise, return INVALID.
+ */
+TokenType keyword (const std::string &text);
+
+using Literal = std::variant<std::monostate, std::string, double>;
 
 struct Token
 {

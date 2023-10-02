@@ -4,6 +4,8 @@
 #include "token.h"
 
 #include <cassert>
+#include <cctype>
+#include <cstdlib>
 #include <string>
 #include <utility>
 #include <variant>
@@ -90,6 +92,7 @@ private:
           }
         else
           add_token (TokenType::SLASH);
+        break;
 
       // Ignored whitespace
       case ' ':
@@ -106,7 +109,13 @@ private:
         break;
 
       default:
-        error (line, "Unrecognized character.");
+        if (std::isdigit (c))
+          parse_number ();
+        else if (std::isalpha (c))
+          parse_identifier ();
+        else
+          error (line, "Unrecognized character.");
+        break;
       }
   }
 
@@ -130,7 +139,44 @@ private:
     // Advance over the closing ".
     advance ();
 
-    add_token (TokenType::STRING, source.substr (start + 1, current - 1));
+    // Discard the quotes by shifitng 1 character.
+    add_token (TokenType::STRING,
+               source.substr (start + 1, current - start - 1));
+  }
+
+  void
+  parse_number ()
+  {
+    while (std::isdigit (peek ()))
+      advance ();
+
+    if (peek () == '.' && std::isdigit (peek_next ()))
+      {
+        // Consume the decimal point
+        advance ();
+
+        while (std::isdigit (peek ()))
+          advance ();
+      }
+
+    add_token (TokenType::NUMBER,
+               std::stod (source.substr (start, current - start)));
+  }
+
+  void
+  parse_identifier ()
+  {
+    const auto is_alpha_numeric
+        = [] (char c) { return std::isdigit (c) || std::isalpha (c); };
+
+    while (is_alpha_numeric (peek ()))
+      advance ();
+
+    TokenType type = keyword (source.substr (start, current - start));
+    if (type == TokenType::INVALID)
+      type = TokenType::IDENTIFIER;
+
+    add_token (type);
   }
 
   void
@@ -142,7 +188,8 @@ private:
   void
   add_token (TokenType t, Literal literal)
   {
-    tokens.emplace_back (t, source.substr (start, current), literal, line);
+    tokens.emplace_back (t, source.substr (start, current - start), literal,
+                         line);
   }
 
   char
@@ -152,8 +199,8 @@ private:
     return source.at (current++);
   }
 
-  bool
-  at_end ()
+  [[nodiscard]] bool
+  at_end () const
   {
     return current >= source.length ();
   }
@@ -170,19 +217,27 @@ private:
     return true;
   }
 
-  char
-  peek ()
+  [[nodiscard]] char
+  peek () const
   {
     if (at_end ())
       return '\0';
     return source.at (current);
   }
 
+  [[nodiscard]] char
+  peek_next () const
+  {
+    if (current + 1 >= source.length ())
+      return '\0';
+    return source.at (current + 1);
+  }
+
   std::string source;
 
   //! Beginning of lexeme.
   int start{};
-  //! Offset frmo #start within the current lexeme.
+  //! Offset from #start within the current lexeme.
   int current{};
 
   //! Line information purely for error and debugging purposes

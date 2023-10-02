@@ -52,6 +52,18 @@ const std::map<TokenType, std::string> token_to_string
         { TokenType::WHILE, "WHILE" },
 
         { TokenType::TOK_EOF, "TOK_EOF" } };
+
+const std::map<std::string, TokenType> keywords = {
+  { "and", TokenType::AND },       { "class", TokenType::CLASS },
+  { "else", TokenType::ELSE },     { "false", TokenType::FALSE },
+  { "fun", TokenType::FUN },       { "for", TokenType::FOR },
+  { "if", TokenType::IF },         { "nil", TokenType::NIL },
+  { "or", TokenType::OR },         { "print", TokenType::PRINT },
+  { "return", TokenType::RETURN }, { "super", TokenType::SUPER },
+  { "this", TokenType::THIS },     { "true", TokenType::TRUE },
+  { "var", TokenType::VAR },       { "while", TokenType::WHILE },
+};
+
 }
 
 std::string
@@ -60,6 +72,14 @@ to_string (const TokenType &t)
   assert (token_to_string.count (t) == 1);
 
   return token_to_string.at (t);
+}
+
+TokenType
+keyword (const std::string &text)
+{
+  if (auto it = keywords.find (text); it != keywords.end ())
+    return it->second;
+  return TokenType::INVALID;
 }
 
 Token::Token (TokenType type, std::string lexeme, Literal literal, int line)
@@ -72,7 +92,6 @@ std::string
 Token::to_string () const
 {
   // TODO see what we need here.
-  return lox::to_string (type) + " " + lexeme + " ";
+  return "{" + lox::to_string (type) + " " + lexeme + "}";
 }
-
 }
