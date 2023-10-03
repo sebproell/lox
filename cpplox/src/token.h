@@ -66,10 +66,9 @@ std::string to_string (const TokenType &t);
  */
 TokenType keyword (const std::string &text);
 
-using Literal = std::variant<std::monostate, std::string, double>;
-
 struct Token
 {
+  using Literal = std::variant<std::monostate, std::string, double>;
   Token (TokenType type, std::string lexeme, Literal literal, int line);
 
   [[nodiscard]] std::string to_string () const;
@@ -79,4 +78,4 @@ struct Token
   const Literal literal;
   const int line;
 };
-}
+} // namespace lox

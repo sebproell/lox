@@ -26,7 +26,7 @@ public:
         start = current;
         scan_token ();
       }
-    tokens.emplace_back (TokenType::TOK_EOF, "", Literal{}, line);
+    tokens.emplace_back (TokenType::TOK_EOF, "", Token::Literal{}, line);
     return tokens;
   }
 
@@ -182,11 +182,11 @@ private:
   void
   add_token (TokenType t)
   {
-    add_token (t, Literal{});
+    add_token (t, Token::Literal{});
   }
 
   void
-  add_token (TokenType t, Literal literal)
+  add_token (TokenType t, Token::Literal literal)
   {
     tokens.emplace_back (t, source.substr (start, current - start), literal,
                          line);
@@ -245,4 +245,4 @@ private:
 
   std::vector<Token> tokens;
 };
-}
+} // namespace lox
