@@ -3,6 +3,7 @@
 #include <cassert>
 #include <map>
 #include <utility>
+#include <variant>
 
 namespace lox
 {
@@ -64,7 +65,7 @@ const std::map<std::string, TokenType> keywords = {
   { "var", TokenType::VAR },       { "while", TokenType::WHILE },
 };
 
-}
+} // namespace
 
 std::string
 to_string (const TokenType &t)
@@ -94,4 +95,29 @@ Token::to_string () const
   // TODO see what we need here.
   return "{" + lox::to_string (type) + " " + lexeme + "}";
 }
+
+struct LiteralVisitor
+{
+  std::string
+  operator() (const std::monostate &) const
+  {
+    return "nil";
+  }
+  std::string
+  operator() (const std::string &s) const
+  {
+    return s;
+  }
+  std::string
+  operator() (const double &d) const
+  {
+    return std::to_string (d);
+  }
+};
+
+std::string
+to_string (const Token::Literal &l)
+{
+  return std::visit (LiteralVisitor{}, l);
 }
+} // namespace lox
