@@ -7,7 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS "ON")
 
 set(CMAKE_CXX_COMPILER "g++")
 
-add_executable(cpplox src/error.cpp src/lox.cpp src/token.cpp)
+add_subdirectorY(src)
 
 enable_testing()
 add_subdirectory(test)
