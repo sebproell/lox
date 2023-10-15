@@ -1,4 +1,7 @@
+#pragma once
+
 #include "expr.h"
+#include <variant>
 
 namespace lox
 {
@@ -21,6 +24,12 @@ struct AstPrinterVisitor
   {
     return std::visit (*this, expr);
   };
+
+  std::string
+  operator() (const std::monostate &) const
+  {
+    return {};
+  }
 
   std::string
   operator() (const ExprLiteral &expr) const

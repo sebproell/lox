@@ -68,20 +68,21 @@ TokenType keyword (const std::string &text);
 
 struct Token
 {
-  using Literal = std::variant<std::monostate, std::string, double>;
+  using Literal = std::variant<std::monostate, std::nullptr_t, std::string,
+                               bool, double>;
 
   Token (TokenType type, std::string lexeme, Literal literal, int line);
 
   [[nodiscard]] std::string to_string () const;
 
   //! Most important information: what type of token is this?
-  const TokenType type;
+  TokenType type;
   //! Only used for printing of this Token.
-  const std::string lexeme;
+  std::string lexeme;
   //! Only used if TokenType is a literal type
-  const Literal literal;
+  Literal literal;
   //! Only for error information
-  const int line;
+  int line;
 };
 
 /**

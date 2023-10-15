@@ -5,12 +5,20 @@
 #include <sstream>
 #include <sysexits.h>
 
+#include "ast_printer.h"
 #include "error.h"
+#include "parser.h"
 #include "scanner.h"
 #include "token.h"
 
 namespace lox
 {
+
+enum class Mode
+{
+  dump_tokens,
+  dump_ast,
+};
 
 std::string
 read_file (const char *file_name)
@@ -22,23 +30,34 @@ read_file (const char *file_name)
 }
 
 void
-run (const std::string &source)
+run (const std::string &source, Mode mode)
 {
-  Scanner scanner{ source };
-  auto tokens = scanner.scan_tokens ();
-  for (const auto &t : tokens)
-    std::cout << t.to_string ();
-  std::cout << std::endl;
+  if (mode == Mode::dump_tokens)
+    {
+      Scanner scanner{ source };
+      auto tokens = scanner.scan_tokens ();
+      for (const auto &t : tokens)
+        std::cout << t.to_string ();
+      std::cout << std::endl;
+    }
+  else if (mode == Mode::dump_ast)
+    {
+      Scanner scanner{ source };
+      auto tokens = scanner.scan_tokens ();
+      Parser parser{ tokens };
+      Expr expr = parser.parse ();
+      std::cout << print_ast (expr) << std::endl;
+    }
 }
 
 void
-run_script (const char *file)
+run_script (const char *file, Mode mode)
 {
-  run (read_file (file));
+  run (read_file (file), mode);
 }
 
 void
-run_prompt ()
+run_prompt (Mode mode)
 {
   std::string line;
   for (;;)
@@ -46,22 +65,29 @@ run_prompt ()
       std::getline (std::cin, line);
       if (line.empty ())
         break;
-      run (line);
+      run (line, mode);
       had_error = false;
     }
 }
 
-void
-dump_tokens (const char *source)
+std::pair<Mode, const char *>
+find_mode_file (int argc, char **argv)
 {
-  run (read_file (source));
-}
+  Mode mode = Mode::dump_tokens;
+  const char *file{ nullptr };
 
-void
-run_special (char **argv, const char *toggle, void (*fun) (const char *source))
-{
-  if (strcmp (argv[1], toggle) == 0)
-    fun (argv[2]);
+  for (int i = 1; i < argc; ++i)
+    {
+      const auto *current_arg = argv[i];
+      if (strcmp (current_arg, "--ast") == 0)
+        mode = Mode::dump_ast;
+      else if (strcmp (current_arg, "--tokens") == 0)
+        mode = Mode::dump_tokens;
+      else
+        file = current_arg;
+    }
+
+  return { mode, file };
 }
 
 } // namespace lox
@@ -71,21 +97,16 @@ main (int argc, char **argv)
 {
   if (argc > 3)
     {
-      std::cout << "Usage: cpplox [--tokens] [script]\n";
+      std::cout << "Usage: cpplox [--tokens|--ast] [script]\n";
       std::exit (EX_USAGE);
     }
-  if (argc == 3)
-    {
-      lox::run_special (argv, "--tokens", &lox::dump_tokens);
-    }
-  else if (argc == 2)
-    {
-      lox::run_script (argv[1]);
-    }
+
+  const auto [mode, file] = lox::find_mode_file (argc, argv);
+
+  if (file)
+    lox::run_script (file, mode);
   else
-    {
-      lox::run_prompt ();
-    }
+    lox::run_prompt (mode);
 
   return lox::had_error ? EX_DATAERR : EX_OK;
 }

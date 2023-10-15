@@ -1,3 +1,5 @@
+#pragma once
+
 #include "box.h"
 #include "token.h"
 
@@ -12,8 +14,8 @@ struct ExprGrouping;
 struct ExprLiteral;
 struct ExprUnary;
 
-using Expr = std::variant<ExprLiteral, Box<ExprBinary>, Box<ExprUnary>,
-                          Box<ExprGrouping> >;
+using Expr = std::variant<std::monostate, ExprLiteral, Box<ExprBinary>,
+                          Box<ExprUnary>, Box<ExprGrouping> >;
 
 struct ExprLiteral
 {
