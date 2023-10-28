@@ -109,7 +109,11 @@ Parser::primary ()
     return ExprLiteral{ nullptr };
 
   if (match (TokenType::NUMBER, TokenType::STRING))
-    return ExprLiteral{ previous ().literal };
+    {
+      const auto &literal = previous ().literal;
+      assert (literal.has_value ());
+      return ExprLiteral{ *literal };
+    }
 
   if (match (TokenType::LEFT_PAREN))
     {

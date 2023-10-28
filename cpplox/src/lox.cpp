@@ -7,6 +7,7 @@
 
 #include "ast_printer.h"
 #include "error.h"
+#include "interpreter.h"
 #include "parser.h"
 #include "scanner.h"
 #include "token.h"
@@ -16,6 +17,7 @@ namespace lox
 
 enum class Mode
 {
+  interpret,
   dump_tokens,
   dump_ast,
 };
@@ -32,21 +34,32 @@ read_file (const char *file_name)
 void
 run (const std::string &source, Mode mode)
 {
-  if (mode == Mode::dump_tokens)
+  Scanner scanner{ source };
+  auto tokens = scanner.scan_tokens ();
+
+  switch (mode)
     {
-      Scanner scanner{ source };
-      auto tokens = scanner.scan_tokens ();
-      for (const auto &t : tokens)
-        std::cout << t.to_string ();
-      std::cout << std::endl;
-    }
-  else if (mode == Mode::dump_ast)
-    {
-      Scanner scanner{ source };
-      auto tokens = scanner.scan_tokens ();
-      Parser parser{ tokens };
-      Expr expr = parser.parse ();
-      std::cout << print_ast (expr) << std::endl;
+    case Mode::interpret:
+      {
+        Parser parser{ tokens };
+        Expr expr = parser.parse ();
+        lox::interpret (expr);
+        break;
+      }
+    case Mode::dump_tokens:
+      {
+        for (const auto &t : tokens)
+          std::cout << t.to_string ();
+        std::cout << std::endl;
+        break;
+      }
+    case Mode::dump_ast:
+      {
+        Parser parser{ tokens };
+        Expr expr = parser.parse ();
+        std::cout << print_ast (expr) << std::endl;
+        break;
+      }
     }
 }
 
@@ -73,7 +86,7 @@ run_prompt (Mode mode)
 std::pair<Mode, const char *>
 find_mode_file (int argc, char **argv)
 {
-  Mode mode = Mode::dump_tokens;
+  Mode mode = Mode::interpret;
   const char *file{ nullptr };
 
   for (int i = 1; i < argc; ++i)
@@ -108,5 +121,10 @@ main (int argc, char **argv)
   else
     lox::run_prompt (mode);
 
-  return lox::had_error ? EX_DATAERR : EX_OK;
+  if (lox::had_error)
+    return EX_DATAERR;
+  if (lox::had_run_time_error)
+    return EX_SOFTWARE;
+
+  return EX_OK;
 }

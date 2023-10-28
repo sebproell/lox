@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <utility>
 #include <variant>
@@ -69,8 +70,7 @@ TokenType keyword (const std::string &text);
 struct Token
 {
   //! The types of literals that may occur in code
-  using Literal = std::variant<std::monostate, std::nullptr_t, std::string,
-                               bool, double>;
+  using Literal = std::variant<std::nullptr_t, std::string, bool, double>;
 
   Token (TokenType type, std::string lexeme, Literal literal, int line);
 
@@ -81,7 +81,7 @@ struct Token
   //! Only used for printing of this Token.
   std::string lexeme;
   //! Only used if TokenType is a literal type
-  Literal literal;
+  std::optional<Literal> literal;
   //! Only for error information
   int line;
 };

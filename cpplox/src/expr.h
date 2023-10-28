@@ -16,11 +16,12 @@ struct ExprUnary;
 
 /**
  * Expressions are implemented with the Visitor design pattern. In C++, this is
- * best done with a variant type. A std::monostate is also included to allow a
- * default constructed (but invalid) expression.
+ * best done with a variant type. To enable recursion within the types included
+ * in the variant, the recursive types are put into the Box helper type which
+ * heap allocates memory.
  */
-using Expr = std::variant<std::monostate, ExprLiteral, Box<ExprBinary>,
-                          Box<ExprUnary>, Box<ExprGrouping> >;
+using Expr = std::variant<ExprLiteral, Box<ExprBinary>, Box<ExprUnary>,
+                          Box<ExprGrouping> >;
 
 struct ExprLiteral
 {

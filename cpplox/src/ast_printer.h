@@ -7,7 +7,6 @@ namespace lox
 {
 struct AstPrinterVisitor
 {
-
   /**
    * Helper to resolve the boxed content. Forwards the call to the unboxed
    * type T.
@@ -23,12 +22,6 @@ struct AstPrinterVisitor
   visit (const Expr &expr) const
   {
     return std::visit (*this, expr);
-  };
-
-  std::string
-  operator() (const std::monostate &) const
-  {
-    return {};
   }
 
   std::string
