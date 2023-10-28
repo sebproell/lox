@@ -1,0 +1,1 @@
+{STRING "abc"}{PLUS +}{STRING "def"}{TOK_EOF }

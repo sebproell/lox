@@ -6,4 +6,5 @@ function(define_test group prefix args)
 endfunction()
 
 add_subdirectory(ast)
+add_subdirectory(interpret)
 add_subdirectory(tokens)

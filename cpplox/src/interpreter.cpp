@@ -102,11 +102,11 @@ stringify (const Value &value)
                   [] (double d) -> std::string {
                     double i;
                     double fractional_part = std::modf (d, &i);
-                    // TODO
+                    std::string s = std::to_string (d);
                     if (fractional_part == 0.)
-                      return std::to_string (i);
+                      return s.substr (0, s.find ("."));
                     else
-                      return std::to_string (d);
+                      return s;
                   },
                   [] (bool b) -> std::string { return b ? "true" : "false"; },
                   [] (const std::string &s) { return s; } },

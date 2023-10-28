@@ -6,6 +6,7 @@
 #include <cassert>
 #include <cctype>
 #include <cstdlib>
+#include <iostream>
 #include <string>
 #include <utility>
 #include <variant>
@@ -136,12 +137,13 @@ private:
         return;
       }
 
-    // Advance over the closing ".
-    advance ();
+    // Advance past the closing quote
+    [[maybe_unused]] char closing_quote = advance ();
+    assert (closing_quote == '"');
 
-    // Discard the quotes by shifitng 1 character.
+    // Discard the quotes by shifting 1 character.
     add_token (TokenType::STRING,
-               source.substr (start + 1, current - start - 1));
+               source.substr (start + 1, (current - 1) - (start + 1)));
   }
 
   void
