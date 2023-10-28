@@ -68,6 +68,7 @@ TokenType keyword (const std::string &text);
 
 struct Token
 {
+  //! The types of literals that may occur in code
   using Literal = std::variant<std::monostate, std::nullptr_t, std::string,
                                bool, double>;
 

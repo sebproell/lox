@@ -14,6 +14,11 @@ struct ExprGrouping;
 struct ExprLiteral;
 struct ExprUnary;
 
+/**
+ * Expressions are implemented with the Visitor design pattern. In C++, this is
+ * best done with a variant type. A std::monostate is also included to allow a
+ * default constructed (but invalid) expression.
+ */
 using Expr = std::variant<std::monostate, ExprLiteral, Box<ExprBinary>,
                           Box<ExprUnary>, Box<ExprGrouping> >;
 
