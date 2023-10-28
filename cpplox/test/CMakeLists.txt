@@ -5,4 +5,5 @@ function(define_test group prefix args)
     add_test(NAME "${group}/${prefix}" COMMAND bash -c "$<TARGET_FILE:cpplox> ${args} ${prefix}.lox 2>&1 | tee ${prefix}.run; diff ${prefix}.out ${prefix}.run")
 endfunction()
 
+add_subdirectory(ast)
 add_subdirectory(tokens)

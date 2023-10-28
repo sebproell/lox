@@ -1,0 +1,6 @@
+file(GLOB input_files CONFIGURE_DEPENDS *.lox)
+foreach(file ${input_files})
+    get_filename_component(prefix ${file} NAME_WE)
+    message(DEBUG "Defining test for --ast: ${prefix}")
+    define_test("ast" ${prefix} "--ast")
+endforeach()
