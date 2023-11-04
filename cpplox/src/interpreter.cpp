@@ -1,5 +1,7 @@
 #include "interpreter.h"
 #include "error.h"
+#include "expr.h"
+#include "stmt.h"
 #include "token.h"
 #include <cmath>
 #include <cstddef>
@@ -8,6 +10,10 @@
 
 namespace lox
 {
+
+/**
+ * Various helpers when interpreting an AST.
+ */
 namespace
 {
 
@@ -133,116 +139,113 @@ struct InterpreterVisitor
     return this->operator() (*boxed_expr);
   }
 
-  [[nodiscard]] Value evaluate (const Expr &expr) const;
+  [[nodiscard]] Value
+  evaluate (const Expr &expr) const
+  {
+    return std::visit (*this, expr);
+  }
 
-  void execute (const Stmt &stmt) const;
+  void
+  execute (const Stmt &stmt) const
+  {
+    std::visit (*this, stmt);
+  }
 
-  void operator() (const StmtPrint &stmt) const;
+  void
+  operator() (const StmtPrint &stmt) const
+  {
+    Value val = evaluate (stmt.expression);
+    std::cout << stringify (val) << '\n';
+  }
 
-  void operator() (const StmtExpr &stmt) const;
+  void
+  operator() (const StmtExpr &stmt) const
+  {
+    // Evaluate an expression for side effects and discard the result
+    (void)evaluate (stmt.expression);
+  }
 
-  [[nodiscard]] Value operator() (const ExprLiteral &expr) const;
+  void
+  operator() (const StmtVar &stmt) const
+  {
+    // TODO
+  }
 
-  [[nodiscard]] Value operator() (const ExprGrouping &expr) const;
+  [[nodiscard]] Value
+  operator() (const ExprLiteral &expr) const
+  {
+    return std::visit ([] (const auto &v) { return Value{ v }; }, expr.value);
+  }
 
-  [[nodiscard]] Value operator() (const ExprUnary &expr) const;
+  [[nodiscard]] Value
+  operator() (const ExprGrouping &expr) const
+  {
+    return evaluate (expr.expression);
+  }
 
-  [[nodiscard]] Value operator() (const ExprBinary &expr) const;
+  [[nodiscard]] Value
+  operator() (const ExprUnary &expr) const
+  {
+    Value right = evaluate (expr.right);
+    switch (expr.op.type)
+      {
+      case TokenType::MINUS:
+        check_number_operand (expr.op, right);
+        return -numeric (right);
+      case TokenType::BANG:
+        return !is_truthy (right);
+      default:
+        return {};
+      }
+  }
+
+  [[nodiscard]] Value
+  operator() (const ExprBinary &expr) const
+  {
+    const Value left = evaluate (expr.left);
+    const Value right = evaluate (expr.right);
+    switch (expr.op.type)
+      {
+      case TokenType::MINUS:
+        check_number_operands (left, expr.op, right);
+        return numeric (left) - numeric (right);
+      case TokenType::SLASH:
+        check_number_operands (left, expr.op, right);
+        return numeric (left) / numeric (right);
+      case TokenType::STAR:
+        check_number_operands (left, expr.op, right);
+        return numeric (left) * numeric (right);
+      case TokenType::PLUS:
+        return evaluate_plus_operator (left, expr.op, right);
+
+      case TokenType::GREATER:
+        check_number_operands (left, expr.op, right);
+        return numeric (left) > numeric (right);
+      case TokenType::GREATER_EQUAL:
+        check_number_operands (left, expr.op, right);
+        return numeric (left) >= numeric (right);
+      case TokenType::LESS:
+        check_number_operands (left, expr.op, right);
+        return numeric (left) < numeric (right);
+      case TokenType::LESS_EQUAL:
+        check_number_operands (left, expr.op, right);
+        return numeric (left) <= numeric (right);
+      case TokenType::BANG_EQUAL:
+        return !is_equal (left, right);
+      case TokenType::EQUAL_EQUAL:
+        return is_equal (left, right);
+      default:
+        return {};
+      }
+  }
+
+  [[nodiscard]] Value
+  operator() (const ExprVariable &expr) const
+  {
+    // TODO
+    return nullptr;
+  }
 };
-
-Value
-InterpreterVisitor::evaluate (const Expr &expr) const
-{
-  return std::visit (*this, expr);
-}
-
-void
-InterpreterVisitor::execute (const Stmt &stmt) const
-{
-  std::visit (*this, stmt);
-}
-
-void
-InterpreterVisitor::operator() (const StmtPrint &stmt) const
-{
-  Value val = evaluate (stmt.expression);
-  std::cout << stringify (val) << '\n';
-}
-
-void
-InterpreterVisitor::operator() (const StmtExpr &stmt) const
-{
-  // Evaluate an expression for side effects and discard the result
-  (void)evaluate (stmt.expression);
-}
-
-Value
-InterpreterVisitor::operator() (const ExprLiteral &expr) const
-{
-  return std::visit ([] (const auto &v) { return Value{ v }; }, expr.value);
-}
-
-Value
-InterpreterVisitor::operator() (const ExprGrouping &expr) const
-{
-  return evaluate (expr.expression);
-}
-
-Value
-InterpreterVisitor::operator() (const ExprUnary &expr) const
-{
-  Value right = evaluate (expr.right);
-  switch (expr.op.type)
-    {
-    case TokenType::MINUS:
-      check_number_operand (expr.op, right);
-      return -numeric (right);
-    case TokenType::BANG:
-      return !is_truthy (right);
-    default:
-      return {};
-    }
-}
-
-Value
-InterpreterVisitor::operator() (const ExprBinary &expr) const
-{
-  const Value left = evaluate (expr.left);
-  const Value right = evaluate (expr.right);
-  switch (expr.op.type)
-    {
-    case TokenType::MINUS:
-      check_number_operands (left, expr.op, right);
-      return numeric (left) - numeric (right);
-    case TokenType::SLASH:
-      check_number_operands (left, expr.op, right);
-      return numeric (left) / numeric (right);
-    case TokenType::STAR:
-      check_number_operands (left, expr.op, right);
-      return numeric (left) * numeric (right);
-    case TokenType::PLUS:
-      return evaluate_plus_operator (left, expr.op, right);
-
-    case TokenType::GREATER:
-      check_number_operands (left, expr.op, right);
-      return numeric (left) > numeric (right);
-    case TokenType::GREATER_EQUAL:
-      check_number_operands (left, expr.op, right);
-      return numeric (left) >= numeric (right);
-    case TokenType::LESS:
-      check_number_operands (left, expr.op, right);
-      return numeric (left) < numeric (right);
-    case TokenType::LESS_EQUAL:
-      check_number_operands (left, expr.op, right);
-      return numeric (left) <= numeric (right);
-    case TokenType::BANG_EQUAL:
-      return !is_equal (left, right);
-    case TokenType::EQUAL_EQUAL:
-      return is_equal (left, right);
-    default:
-      return {};
-    }
-}
 
 void
 interpret (const std::vector<Stmt> &program)

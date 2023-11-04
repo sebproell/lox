@@ -32,6 +32,10 @@ private:
   std::vector<Token> tokens;
   std::size_t current{};
 
+  Stmt declaration ();
+
+  Stmt var_declaration ();
+
   Stmt statement ();
 
   Stmt print_statement ();

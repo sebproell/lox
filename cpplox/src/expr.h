@@ -13,6 +13,7 @@ struct ExprBinary;
 struct ExprGrouping;
 struct ExprLiteral;
 struct ExprUnary;
+struct ExprVariable;
 
 /**
  * Expressions are implemented with the Visitor design pattern. In C++, this is
@@ -20,12 +21,17 @@ struct ExprUnary;
  * in the variant, the recursive types are put into the Box helper type which
  * heap allocates memory.
  */
-using Expr = std::variant<ExprLiteral, Box<ExprBinary>, Box<ExprUnary>,
-                          Box<ExprGrouping> >;
+using Expr = std::variant<ExprLiteral, ExprVariable, Box<ExprBinary>,
+                          Box<ExprUnary>, Box<ExprGrouping> >;
 
 struct ExprLiteral
 {
   Token::Literal value;
+};
+
+struct ExprVariable
+{
+  Token name;
 };
 
 struct ExprUnary

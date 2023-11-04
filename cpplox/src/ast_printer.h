@@ -44,6 +44,14 @@ struct AstPrinterVisitor
   }
 
   std::string
+  operator() (const StmtVar &stmt) const
+  {
+    return "(var " + stmt.name.lexeme
+           + (stmt.initializer ? (" = " + visit (*stmt.initializer)) : "")
+           + ")";
+  }
+
+  std::string
   operator() (const ExprLiteral &expr) const
   {
     return to_string (expr.value);
@@ -66,6 +74,12 @@ struct AstPrinterVisitor
   {
     return "(" + visit (expr.left) + " " + expr.op.lexeme + " "
            + visit (expr.right) + ")";
+  }
+
+  std::string
+  operator() (const ExprVariable &expr) const
+  {
+    return "( var " + expr.name.lexeme + ")";
   }
 };
 

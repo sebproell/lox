@@ -14,9 +14,40 @@ Parser::parse ()
   while (!is_at_end ())
     {
       // TODO restore error handling
-      statements.emplace_back (statement ());
+      statements.emplace_back (declaration ());
     }
   return statements;
+}
+
+Stmt
+Parser::declaration ()
+{
+  try
+    {
+      if (match (TokenType::VAR))
+        return var_declaration ();
+      return statement ();
+    }
+  catch (const ParseError &error)
+    {
+      synchronize ();
+      // Return an arbitrary Statement, we will never evaluate it.
+      return {};
+    }
+}
+
+Stmt
+Parser::var_declaration ()
+{
+  Token name = consume (TokenType::IDENTIFIER, "Expect variable name.");
+
+  std::optional<Expr> initializer{};
+  if (match (TokenType::EQUAL))
+    initializer = expression ();
+
+  consume (TokenType::SEMICOLON, "Expect ';' after variable declaration.");
+
+  return StmtVar{ name, initializer };
 }
 
 Stmt
@@ -138,6 +169,9 @@ Parser::primary ()
       assert (literal.has_value ());
       return ExprLiteral{ *literal };
     }
+
+  if (match (TokenType::IDENTIFIER))
+    return ExprVariable{ previous () };
 
   if (match (TokenType::LEFT_PAREN))
     {
