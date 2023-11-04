@@ -1,4 +1,5 @@
 #include "interpreter.h"
+#include "environment.h"
 #include "error.h"
 #include "expr.h"
 #include "stmt.h"
@@ -16,12 +17,6 @@ namespace lox
  */
 namespace
 {
-
-/**
- * The result of interpreting a syntax tree.
- */
-using Value = std::variant<std::nullptr_t, double, bool, std::string>;
-
 // overload visit with multiple lambdas
 template <class... Ts> struct overloaded : Ts...
 {
@@ -61,7 +56,7 @@ is_equal (const Value &left, const Value &right) // NOLINT
   return std::visit (
       overloaded{ // Perform the C++ equality check if the two types match
                   is_equal_same_type{},
-                  // Two non-mathching types can never be equal
+                  // Two non-matching types can never be equal
                   [] (const auto &, const auto &) { return false; } },
       left, right);
 }
@@ -128,6 +123,12 @@ stringify (const Value &value)
  */
 struct InterpreterVisitor
 {
+
+  /**
+   * The visitor may require the environment of variables.
+   */
+  Environment &env;
+
   /**
    * Helper to resolve the boxed content. Forwards the call to the unboxed
    * type T.
@@ -168,7 +169,11 @@ struct InterpreterVisitor
   void
   operator() (const StmtVar &stmt) const
   {
-    // TODO
+    Value value = nullptr;
+    if (stmt.initializer)
+      value = evaluate (*stmt.initializer);
+
+    env.define (stmt.name.lexeme, value);
   }
 
   [[nodiscard]] Value
@@ -242,18 +247,47 @@ struct InterpreterVisitor
   [[nodiscard]] Value
   operator() (const ExprVariable &expr) const
   {
-    // TODO
-    return nullptr;
+    return env.get (expr.name);
   }
 };
 
+namespace internal
+{
+class InterpreterImpl
+{
+public:
+  Environment env;
+};
+} // namespace internal
+
+Interpreter::Interpreter ()
+    : pimpl (std::make_unique<internal::InterpreterImpl> ())
+{
+}
+
+// Default the destructor here to use unique_ptr as pimpl.
+Interpreter::~Interpreter () = default;
+
 void
-interpret (const std::vector<Stmt> &program)
+Interpreter::interpret (const std::vector<Stmt> &program)
 {
   try
     {
       for (const auto &stmt : program)
-        InterpreterVisitor{}.execute (stmt);
+        interpret (stmt);
+    }
+  catch (const RunTimeError &e)
+    {
+      run_time_error (e);
+    }
+}
+
+void
+Interpreter::interpret (const Stmt &stmt)
+{
+  try
+    {
+      InterpreterVisitor{ pimpl->env }.execute (stmt);
     }
   catch (const RunTimeError &e)
     {

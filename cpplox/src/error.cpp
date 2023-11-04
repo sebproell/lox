@@ -41,4 +41,9 @@ RunTimeError::RunTimeError (Token token, const char *message)
     : std::runtime_error (message), token (std::move (token))
 {
 }
+
+RunTimeError::RunTimeError (Token token, const std::string &message)
+    : std::runtime_error (message), token (std::move (token))
+{
+}
 } // namespace lox

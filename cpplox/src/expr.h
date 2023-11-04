@@ -26,7 +26,7 @@ using Expr = std::variant<ExprLiteral, ExprVariable, Box<ExprBinary>,
 
 struct ExprLiteral
 {
-  Token::Literal value;
+  Literal value;
 };
 
 struct ExprVariable

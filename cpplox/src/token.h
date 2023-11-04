@@ -1,9 +1,8 @@
 #pragma once
 
+#include "types.h"
 #include <optional>
-#include <string>
 #include <utility>
-#include <variant>
 
 namespace lox
 {
@@ -69,9 +68,6 @@ TokenType keyword (const std::string &text);
 
 struct Token
 {
-  //! The types of literals that may occur in code
-  using Literal = std::variant<std::nullptr_t, std::string, bool, double>;
-
   Token (TokenType type, std::string lexeme, Literal literal, int line);
 
   [[nodiscard]] std::string to_string () const;
@@ -86,8 +82,4 @@ struct Token
   int line;
 };
 
-/**
- * String representation of the literal.
- */
-std::string to_string (const Token::Literal &l);
 } // namespace lox

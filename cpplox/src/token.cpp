@@ -96,28 +96,4 @@ Token::to_string () const
   return "{" + lox::to_string (type) + " " + lexeme + "}";
 }
 
-struct LiteralVisitor
-{
-  std::string
-  operator() (const std::monostate &) const
-  {
-    return "nil";
-  }
-  std::string
-  operator() (const std::string &s) const
-  {
-    return s;
-  }
-  std::string
-  operator() (const double &d) const
-  {
-    return std::to_string (d);
-  }
-};
-
-std::string
-to_string (const Token::Literal &l)
-{
-  return std::visit (LiteralVisitor{}, l);
-}
 } // namespace lox

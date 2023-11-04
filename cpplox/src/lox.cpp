@@ -43,7 +43,10 @@ run (const std::string &source, Mode mode)
       {
         Parser parser{ tokens };
         std::vector<Stmt> program = parser.parse ();
-        lox::interpret (program);
+
+        // TODO interpreter is thrown away in REPL after every line
+        Interpreter interpreter;
+        interpreter.interpret (program);
         break;
       }
     case Mode::dump_tokens:

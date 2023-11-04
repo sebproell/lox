@@ -26,7 +26,7 @@ public:
         start = current;
         scan_token ();
       }
-    tokens.emplace_back (TokenType::TOK_EOF, "", Token::Literal{}, line);
+    tokens.emplace_back (TokenType::TOK_EOF, "", Literal{}, line);
     return tokens;
   }
 
@@ -186,11 +186,11 @@ private:
   void
   add_token (TokenType t)
   {
-    add_token (t, Token::Literal{});
+    add_token (t, Literal{});
   }
 
   void
-  add_token (TokenType t, Token::Literal literal)
+  add_token (TokenType t, Literal literal)
   {
     tokens.emplace_back (t,
                          std::string (source.substr (start, current - start)),
