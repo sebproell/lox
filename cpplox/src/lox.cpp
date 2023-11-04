@@ -35,8 +35,7 @@ read_file (const char *file_name)
 void
 run (const std::string &source, Mode mode)
 {
-  Scanner scanner{ source };
-  auto tokens = scanner.scan_tokens ();
+  auto tokens = scan_tokens (source);
 
   switch (mode)
     {

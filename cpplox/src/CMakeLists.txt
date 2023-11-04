@@ -1,3 +1,4 @@
 add_executable(cpplox)
-target_sources(cpplox PRIVATE error.cpp lox.cpp interpreter.cpp parser.cpp token.cpp)
+file(GLOB _sources CONFIGURE_DEPENDS *.cpp)
+target_sources(cpplox PRIVATE ${_sources})
 
