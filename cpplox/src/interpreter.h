@@ -1,18 +1,13 @@
-#include "expr.h"
-#include "token.h"
-#include <cassert>
-#include <cstddef>
-#include <string>
-#include <variant>
+#include "stmt.h"
+#include <vector>
 
 namespace lox
 {
 
-
 /**
- * The central interpret call: given an expression, evaluate it and print the
+ * The central interpret call: given a program, evaluate it and print the
  * result or report an error.
  */
-void interpret (const Expr &expression);
+void interpret (const std::vector<Stmt> &program);
 
 } // namespace lox

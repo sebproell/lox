@@ -117,6 +117,8 @@ stringify (const Value &value)
 
 /**
  * A visitor to interpret a syntax tree.
+ *
+ * This class is a visior for both Expr and Stmt variants.
  */
 struct InterpreterVisitor
 {
@@ -131,21 +133,47 @@ struct InterpreterVisitor
     return this->operator() (*boxed_expr);
   }
 
-  [[nodiscard]] Value visit (const Expr &expr) const;
+  [[nodiscard]] Value evaluate (const Expr &expr) const;
 
-  Value operator() (const ExprLiteral &expr) const;
+  void execute (const Stmt &stmt) const;
 
-  Value operator() (const ExprGrouping &expr) const;
+  void operator() (const StmtPrint &stmt) const;
 
-  Value operator() (const ExprUnary &expr) const;
+  void operator() (const StmtExpr &stmt) const;
 
-  Value operator() (const ExprBinary &expr) const;
+  [[nodiscard]] Value operator() (const ExprLiteral &expr) const;
+
+  [[nodiscard]] Value operator() (const ExprGrouping &expr) const;
+
+  [[nodiscard]] Value operator() (const ExprUnary &expr) const;
+
+  [[nodiscard]] Value operator() (const ExprBinary &expr) const;
 };
 
 Value
-InterpreterVisitor::visit (const Expr &expr) const
+InterpreterVisitor::evaluate (const Expr &expr) const
 {
   return std::visit (*this, expr);
+}
+
+void
+InterpreterVisitor::execute (const Stmt &stmt) const
+{
+  std::visit (*this, stmt);
+}
+
+void
+InterpreterVisitor::operator() (const StmtPrint &stmt) const
+{
+  Value val = evaluate (stmt.expression);
+  std::cout << stringify (val) << '\n';
+}
+
+void
+InterpreterVisitor::operator() (const StmtExpr &stmt) const
+{
+  // Evaluate an expression for side effects and discard the result
+  (void)evaluate (stmt.expression);
 }
 
 Value
@@ -157,13 +185,13 @@ InterpreterVisitor::operator() (const ExprLiteral &expr) const
 Value
 InterpreterVisitor::operator() (const ExprGrouping &expr) const
 {
-  return visit (expr.expression);
+  return evaluate (expr.expression);
 }
 
 Value
 InterpreterVisitor::operator() (const ExprUnary &expr) const
 {
-  Value right = visit (expr.right);
+  Value right = evaluate (expr.right);
   switch (expr.op.type)
     {
     case TokenType::MINUS:
@@ -179,8 +207,8 @@ InterpreterVisitor::operator() (const ExprUnary &expr) const
 Value
 InterpreterVisitor::operator() (const ExprBinary &expr) const
 {
-  const Value left = visit (expr.left);
-  const Value right = visit (expr.right);
+  const Value left = evaluate (expr.left);
+  const Value right = evaluate (expr.right);
   switch (expr.op.type)
     {
     case TokenType::MINUS:
@@ -217,12 +245,12 @@ InterpreterVisitor::operator() (const ExprBinary &expr) const
 }
 
 void
-interpret (const Expr &expression)
+interpret (const std::vector<Stmt> &program)
 {
   try
     {
-      Value value = InterpreterVisitor{}.visit (expression);
-      std::cout << stringify (value) << '\n';
+      for (const auto &stmt : program)
+        InterpreterVisitor{}.execute (stmt);
     }
   catch (const RunTimeError &e)
     {

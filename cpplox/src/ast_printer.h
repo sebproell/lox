@@ -1,6 +1,7 @@
 #pragma once
 
 #include "expr.h"
+#include "stmt.h"
 #include <variant>
 
 namespace lox
@@ -22,6 +23,24 @@ struct AstPrinterVisitor
   visit (const Expr &expr) const
   {
     return std::visit (*this, expr);
+  }
+
+  [[nodiscard]] std::string
+  visit (const Stmt &stmt) const
+  {
+    return std::visit (*this, stmt);
+  }
+
+  std::string
+  operator() (const StmtPrint &stmt) const
+  {
+    return "(print " + visit (stmt.expression) + ")";
+  }
+
+  std::string
+  operator() (const StmtExpr &stmt) const
+  {
+    return "(expr " + visit (stmt.expression) + ")";
   }
 
   std::string
@@ -54,5 +73,11 @@ inline std::string
 print_ast (const Expr &expression)
 {
   return AstPrinterVisitor{}.visit (expression);
+}
+
+inline std::string
+print_ast (const Stmt &stmt)
+{
+  return AstPrinterVisitor{}.visit (stmt);
 }
 } // namespace lox

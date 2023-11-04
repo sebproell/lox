@@ -10,6 +10,7 @@
 #include "interpreter.h"
 #include "parser.h"
 #include "scanner.h"
+#include "stmt.h"
 #include "token.h"
 
 namespace lox
@@ -42,8 +43,8 @@ run (const std::string &source, Mode mode)
     case Mode::interpret:
       {
         Parser parser{ tokens };
-        Expr expr = parser.parse ();
-        lox::interpret (expr);
+        std::vector<Stmt> program = parser.parse ();
+        lox::interpret (program);
         break;
       }
     case Mode::dump_tokens:
@@ -56,8 +57,9 @@ run (const std::string &source, Mode mode)
     case Mode::dump_ast:
       {
         Parser parser{ tokens };
-        Expr expr = parser.parse ();
-        std::cout << print_ast (expr) << std::endl;
+        std::vector<Stmt> program = parser.parse ();
+        for (const auto &stmt : program)
+          std::cout << print_ast (stmt) << std::endl;
         break;
       }
     }

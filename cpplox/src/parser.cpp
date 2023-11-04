@@ -1,23 +1,47 @@
 #include "parser.h"
 #include "error.h"
+#include "token.h"
 
 #include <cassert>
 namespace lox
 {
 Parser::Parser (std::vector<Token> tokens) : tokens (std::move (tokens)) {}
 
-Expr
+std::vector<Stmt>
 Parser::parse ()
 {
-  // TODO: parses only a single statement right now
-  try
+  std::vector<Stmt> statements{};
+  while (!is_at_end ())
     {
-      return expression ();
+      // TODO restore error handling
+      statements.emplace_back (statement ());
     }
-  catch (const ParseError &e)
-    {
-      return {};
-    }
+  return statements;
+}
+
+Stmt
+Parser::statement ()
+{
+  if (match (TokenType::PRINT))
+    return print_statement ();
+  else
+    return expr_statement ();
+}
+
+Stmt
+Parser::print_statement ()
+{
+  Expr value = expression ();
+  consume (TokenType::SEMICOLON, "Expect ';' after value.");
+  return StmtPrint{ std::move (value) };
+}
+
+Stmt
+Parser::expr_statement ()
+{
+  Expr value = expression ();
+  consume (TokenType::SEMICOLON, "Expect ';' after value.");
+  return StmtExpr{ std::move (value) };
 }
 
 Expr

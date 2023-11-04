@@ -1,6 +1,7 @@
 #pragma once
 
 #include "expr.h"
+#include "stmt.h"
 #include "token.h"
 
 #include <vector>
@@ -13,9 +14,10 @@ public:
   Parser (std::vector<Token> tokens);
 
   /**
-   * Parse the sequence of Tokens in this Parser into an Expr.
+   * Parse the sequence of Tokens in this Parser into a program, i.e., a series
+   * of statements.
    */
-  Expr parse ();
+  std::vector<Stmt> parse ();
 
 private:
   /**
@@ -29,6 +31,12 @@ private:
 
   std::vector<Token> tokens;
   std::size_t current{};
+
+  Stmt statement ();
+
+  Stmt print_statement ();
+
+  Stmt expr_statement ();
 
   Expr expression ();
 

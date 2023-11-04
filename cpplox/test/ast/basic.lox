@@ -1,1 +1,1 @@
-"abc" + "def" -12/ (1+2) * ( 3 - 4) + !true // single line only supported in the early stage of the parser
+"abc" + "def" -12/ (1+2) * ( 3 - 4) + !true; // single line only supported in the early stage of the parser
