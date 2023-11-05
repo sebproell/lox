@@ -4,6 +4,7 @@
 #include "expr.h"
 #include "stmt.h"
 #include "token.h"
+#include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <iostream>
@@ -126,8 +127,10 @@ struct InterpreterVisitor
 
   /**
    * The visitor may require the environment of variables.
+   * This is a mutable pointer to allow changing the environment in different
+   * scopes.
    */
-  Environment &env;
+  mutable Environment *env;
 
   /**
    * Helper to resolve the boxed content. Forwards the call to the unboxed
@@ -173,7 +176,32 @@ struct InterpreterVisitor
     if (stmt.initializer)
       value = evaluate (*stmt.initializer);
 
-    env.define (stmt.name.lexeme, value);
+    env->define (stmt.name.lexeme, value);
+  }
+
+  void
+  operator() (const StmtBlock &stmt) const
+  {
+    execute_block (stmt.statements);
+  }
+
+  void
+  execute_block (const std::vector<Stmt> &stmts) const
+  {
+    // Set up a block environment and use that as the inner-most environment
+    // during evaluation of the block's statements. Make sure to restore the
+    // previous environment on all(!) exit paths via RAII.
+    const auto delete_block_env = [this, previous = env] (auto *block_env) {
+      delete block_env;
+      // restore the old environment
+      this->env = previous;
+    };
+    std::unique_ptr<Environment, decltype (delete_block_env)> block_env (
+        new Environment (env), delete_block_env);
+    this->env = block_env.get ();
+
+    for (const auto &stmt : stmts)
+      execute (stmt);
   }
 
   [[nodiscard]] Value
@@ -247,14 +275,16 @@ struct InterpreterVisitor
   [[nodiscard]] Value
   operator() (const ExprVariable &expr) const
   {
-    return env[expr.name];
+    assert (env != nullptr);
+    return (*env)[expr.name];
   }
 
   [[nodiscard]] Value
   operator() (const ExprAssign &expr) const
   {
+    assert (env != nullptr);
     Value value = evaluate (expr.value);
-    env[expr.name] = value;
+    (*env)[expr.name] = value;
     return value;
   }
 };
@@ -295,7 +325,7 @@ Interpreter::interpret (const Stmt &stmt)
 {
   try
     {
-      InterpreterVisitor{ pimpl->env }.execute (stmt);
+      InterpreterVisitor{ &pimpl->env }.execute (stmt);
     }
   catch (const RunTimeError &e)
     {

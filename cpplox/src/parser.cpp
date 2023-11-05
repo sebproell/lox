@@ -77,6 +77,8 @@ private:
   {
     if (match (TokenType::PRINT))
       return print_statement ();
+    if (match (TokenType::LEFT_BRACE))
+      return block_statement ();
     else
       return expr_statement ();
   }
@@ -87,6 +89,24 @@ private:
     Expr value = expression ();
     consume (TokenType::SEMICOLON, "Expect ';' after value.");
     return StmtPrint{ std::move (value) };
+  }
+
+  Stmt
+  block_statement ()
+  {
+    return StmtBlock{ until_end_of_block () };
+  }
+
+  std::vector<Stmt>
+  until_end_of_block ()
+  {
+    std::vector<Stmt> statements;
+    while (!check (TokenType::RIGHT_BRACE) && !is_at_end ())
+      {
+        statements.emplace_back (declaration ());
+      }
+    consume (TokenType::RIGHT_BRACE, "Expect '}' after block.");
+    return statements;
   }
 
   Stmt

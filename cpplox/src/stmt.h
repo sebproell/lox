@@ -3,14 +3,16 @@
 #include "expr.h"
 #include <optional>
 #include <variant>
+#include <vector>
 
 namespace lox
 {
 struct StmtExpr;
 struct StmtPrint;
 struct StmtVar;
+struct StmtBlock;
 
-using Stmt = std::variant<StmtExpr, StmtPrint, StmtVar>;
+using Stmt = std::variant<StmtExpr, StmtPrint, StmtVar, StmtBlock>;
 
 struct StmtExpr
 {
@@ -26,5 +28,10 @@ struct StmtVar
 {
   Token name;
   std::optional<Expr> initializer;
+};
+
+struct StmtBlock
+{
+  std::vector<Stmt> statements;
 };
 } // namespace lox

@@ -11,6 +11,10 @@ namespace lox
 class Environment
 {
 public:
+  Environment () = default;
+
+  Environment (Environment *enclosing) : enclosing (enclosing) {}
+
   void
   define (std::string name, Value value)
   {
@@ -24,6 +28,9 @@ public:
     if (auto it = values.find (name.lexeme); it != values.end ())
       return it->second;
 
+    if (enclosing != nullptr)
+      return (*enclosing)[name];
+
     throw RunTimeError (name, "Undefined variable '" + name.lexeme + "'.");
   }
 
@@ -36,5 +43,6 @@ public:
 
 private:
   std::map<std::string, Value> values;
+  Environment *enclosing{ nullptr };
 };
 } // namespace lox

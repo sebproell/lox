@@ -2,6 +2,7 @@
 
 #include "expr.h"
 #include "stmt.h"
+#include <sstream>
 #include <variant>
 
 namespace lox
@@ -49,6 +50,21 @@ struct AstPrinterVisitor
     return "(var " + stmt.name.lexeme
            + (stmt.initializer ? (" = " + visit (*stmt.initializer)) : "")
            + ")";
+  }
+
+  std::string
+  operator() (const StmtBlock &stmt) const
+  {
+    std::stringstream ss;
+    ss << "(block ";
+
+    for (const auto &s : stmt.statements)
+      {
+        ss << visit (s);
+      }
+
+    ss << ")";
+    return ss.str ();
   }
 
   std::string
