@@ -19,12 +19,19 @@ public:
   }
 
   [[nodiscard]] const Value &
-  get (const Token &name) const
+  operator[] (const Token &name) const
   {
     if (auto it = values.find (name.lexeme); it != values.end ())
       return it->second;
 
     throw RunTimeError (name, "Undefined variable '" + name.lexeme + "'.");
+  }
+
+  Value &
+  operator[] (const Token &name)
+  {
+    const Environment &const_env = *this;
+    return const_cast<Value &> (const_env[name]);
   }
 
 private:

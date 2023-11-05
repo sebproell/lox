@@ -14,6 +14,7 @@ struct ExprGrouping;
 struct ExprLiteral;
 struct ExprUnary;
 struct ExprVariable;
+struct ExprAssign;
 
 /**
  * Expressions are implemented with the Visitor design pattern. In C++, this is
@@ -22,7 +23,7 @@ struct ExprVariable;
  * heap allocates memory.
  */
 using Expr = std::variant<ExprLiteral, ExprVariable, Box<ExprBinary>,
-                          Box<ExprUnary>, Box<ExprGrouping> >;
+                          Box<ExprUnary>, Box<ExprGrouping>, Box<ExprAssign> >;
 
 struct ExprLiteral
 {
@@ -45,6 +46,12 @@ struct ExprBinary
   Expr left;
   Expr right;
   Token op;
+};
+
+struct ExprAssign
+{
+  Token name;
+  Expr value;
 };
 
 struct ExprGrouping

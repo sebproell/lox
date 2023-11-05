@@ -81,6 +81,12 @@ struct AstPrinterVisitor
   {
     return "( var " + expr.name.lexeme + ")";
   }
+
+  std::string
+  operator() (const ExprAssign &expr) const
+  {
+    return "( assign " + expr.name.lexeme + visit (expr.value) + ")";
+  }
 };
 
 inline std::string

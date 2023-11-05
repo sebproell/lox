@@ -247,7 +247,15 @@ struct InterpreterVisitor
   [[nodiscard]] Value
   operator() (const ExprVariable &expr) const
   {
-    return env.get (expr.name);
+    return env[expr.name];
+  }
+
+  [[nodiscard]] Value
+  operator() (const ExprAssign &expr) const
+  {
+    Value value = evaluate (expr.value);
+    env[expr.name] = value;
+    return value;
   }
 };
 
