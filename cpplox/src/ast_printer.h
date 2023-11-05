@@ -68,6 +68,20 @@ struct AstPrinterVisitor
   }
 
   std::string
+  operator() (const StmtIf &stmt) const
+  {
+    std::stringstream ss;
+    ss << "(if ";
+    ss << visit (stmt.then_branch);
+
+    if (stmt.else_branch)
+      ss << " else " << visit (*stmt.else_branch);
+
+    ss << ")";
+    return ss.str ();
+  }
+
+  std::string
   operator() (const ExprLiteral &expr) const
   {
     return to_string (expr.value);

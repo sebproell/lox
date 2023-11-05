@@ -75,12 +75,30 @@ private:
   Stmt
   statement ()
   {
+    if (match (TokenType::IF))
+      return if_statement ();
     if (match (TokenType::PRINT))
       return print_statement ();
     if (match (TokenType::LEFT_BRACE))
       return block_statement ();
     else
       return expr_statement ();
+  }
+
+  Stmt
+  if_statement ()
+  {
+    consume (TokenType::LEFT_PAREN, "Expect '(' after 'if'.");
+    Expr condition = expression ();
+    consume (TokenType::RIGHT_PAREN, "Expect ')' after 'if' condition.");
+
+    Stmt then_branch = statement ();
+
+    std::optional<Stmt> else_branch{};
+    if (match (TokenType::ELSE))
+      else_branch = statement ();
+
+    return StmtIf{ condition, then_branch, else_branch };
   }
 
   Stmt

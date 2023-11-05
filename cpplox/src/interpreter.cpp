@@ -134,10 +134,10 @@ struct InterpreterVisitor
 
   /**
    * Helper to resolve the boxed content. Forwards the call to the unboxed
-   * type T.
+   * type T. Notaby, this works for boxed Stmt _and_ Expr variants.
    */
   template <typename T>
-  Value
+  auto
   operator() (const Box<T> &boxed_expr) const
   {
     return this->operator() (*boxed_expr);
@@ -183,6 +183,15 @@ struct InterpreterVisitor
   operator() (const StmtBlock &stmt) const
   {
     execute_block (stmt.statements);
+  }
+
+  void
+  operator() (const StmtIf &stmt) const
+  {
+    if (is_truthy (evaluate (stmt.condition)))
+      execute (stmt.then_branch);
+    else if (stmt.else_branch)
+      execute (*stmt.else_branch);
   }
 
   void
