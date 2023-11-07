@@ -12,9 +12,10 @@ struct StmtPrint;
 struct StmtVar;
 struct StmtBlock;
 struct StmtIf;
+struct StmtWhile;
 
-using Stmt
-    = std::variant<StmtExpr, StmtPrint, StmtVar, StmtBlock, Box<StmtIf> >;
+using Stmt = std::variant<StmtExpr, StmtPrint, StmtVar, StmtBlock, Box<StmtIf>,
+                          Box<StmtWhile> >;
 
 struct StmtExpr
 {
@@ -42,5 +43,11 @@ struct StmtIf
   Expr condition;
   Stmt then_branch;
   std::optional<Stmt> else_branch;
+};
+
+struct StmtWhile
+{
+  Expr condition;
+  Stmt body;
 };
 } // namespace lox

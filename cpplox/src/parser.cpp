@@ -79,6 +79,8 @@ private:
       return if_statement ();
     if (match (TokenType::PRINT))
       return print_statement ();
+    if (match (TokenType::WHILE))
+      return while_statement ();
     if (match (TokenType::LEFT_BRACE))
       return block_statement ();
     else
@@ -107,6 +109,17 @@ private:
     Expr value = expression ();
     consume (TokenType::SEMICOLON, "Expect ';' after value.");
     return StmtPrint{ std::move (value) };
+  }
+
+  Stmt
+  while_statement ()
+  {
+    consume (TokenType::LEFT_PAREN, "Expect '(' after 'while'.");
+    Expr condition = expression ();
+    consume (TokenType::RIGHT_PAREN, "Expect ')' after 'while' condition.");
+
+    Stmt body = statement ();
+    return StmtWhile{ condition, body };
   }
 
   Stmt

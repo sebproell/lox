@@ -195,6 +195,13 @@ struct InterpreterVisitor
   }
 
   void
+  operator() (const StmtWhile &stmt) const
+  {
+    while (is_truthy (evaluate (stmt.condition)))
+      execute (stmt.body);
+  }
+
+  void
   execute_block (const std::vector<Stmt> &stmts) const
   {
     // Set up a block environment and use that as the inner-most environment

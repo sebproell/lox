@@ -83,6 +83,17 @@ struct AstPrinterVisitor
   }
 
   std::string
+  operator() (const StmtWhile &stmt) const
+  {
+    std::stringstream ss;
+    ss << "(if ";
+    ss << visit (stmt.condition);
+    ss << visit (stmt.body);
+    ss << ")";
+    return ss.str ();
+  }
+
+  std::string
   operator() (const ExprLiteral &expr) const
   {
     return to_string (expr.value);
@@ -109,13 +120,13 @@ struct AstPrinterVisitor
   std::string
   operator() (const ExprVariable &expr) const
   {
-    return "( var " + expr.name.lexeme + ")";
+    return "(var " + expr.name.lexeme + ")";
   }
 
   std::string
   operator() (const ExprAssign &expr) const
   {
-    return "( assign " + expr.name.lexeme + visit (expr.value) + ")";
+    return "(assign " + expr.name.lexeme + visit (expr.value) + ")";
   }
 
   std::string
