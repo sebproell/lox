@@ -1,10 +1,12 @@
 #include "parser.h"
 #include "error.h"
 #include "expr.h"
+#include "stmt.h"
 #include "token.h"
 
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <variant>
 namespace lox
 {
@@ -75,6 +77,8 @@ private:
   Stmt
   statement ()
   {
+    if (match (TokenType::FOR))
+      return for_statement ();
     if (match (TokenType::IF))
       return if_statement ();
     if (match (TokenType::PRINT))
@@ -85,6 +89,45 @@ private:
       return block_statement ();
     else
       return expr_statement ();
+  }
+
+  Stmt
+  for_statement ()
+  {
+    consume (TokenType::LEFT_PAREN, "Expect '(' after 'for'.");
+    std::optional<Stmt> initializer;
+    if (match (TokenType::SEMICOLON))
+      initializer = std::nullopt;
+    else if (match (TokenType::VAR))
+      initializer = var_declaration ();
+    else
+      initializer = expr_statement ();
+
+    Expr condition = (!check (TokenType::SEMICOLON)) ? expression ()
+                                                     : ExprLiteral{ true };
+    consume (TokenType::SEMICOLON, "Expect ';' after loop condition.");
+
+    std::optional<Expr> increment;
+    if (!check (TokenType::RIGHT_PAREN))
+      increment = expression ();
+    consume (TokenType::RIGHT_PAREN, "Expect ')' after for clauses.");
+
+    Stmt body = statement ();
+
+    if (increment)
+      {
+        body = StmtBlock{ std::vector<Stmt>{ std::move (body),
+                                             StmtExpr{ *increment } } };
+      }
+
+    body = StmtWhile{ condition, std::move (body) };
+
+    if (initializer)
+      {
+        body
+            = StmtBlock{ std::vector<Stmt>{ *initializer, std::move (body) } };
+      }
+    return body;
   }
 
   Stmt
@@ -157,8 +200,8 @@ private:
   Expr
   assignment ()
   {
-    // trick: parse the left-hand side as a value and figure out the target
-    // afterwards
+    // trick: parse the left-hand side as a value and figure out the
+    // target afterwards
     Expr expr = expr_or ();
 
     if (match (TokenType::EQUAL))
@@ -278,7 +321,8 @@ private:
   Expr
   primary ()
   {
-    // primary → NUMBER | STRING | "true" | "false" | "nil" | "(" expr ")";
+    // primary → NUMBER | STRING | "true" | "false" | "nil" | "(" expr
+    // ")";
     if (match (TokenType::FALSE))
       return ExprLiteral{ false };
     if (match (TokenType::TRUE))
@@ -327,7 +371,8 @@ private:
     advance ();
     while (!is_at_end ())
       {
-        // We stepped over a semicolon which must mark the end of a statement
+        // We stepped over a semicolon which must mark the end of a
+        // statement
         if (previous ().type == TokenType::SEMICOLON)
           return;
 
