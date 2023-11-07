@@ -1,9 +1,9 @@
 var a = 2;
 if (true)
 {
-    if( a > 1)
+    if( a > 1 and a > 0)
         print "first";
-    if (a > 2)
+    if (a > 2 or a >= 6)
         print "Not printed";
     else if (a == 2)
     {

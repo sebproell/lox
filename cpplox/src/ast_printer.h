@@ -72,6 +72,7 @@ struct AstPrinterVisitor
   {
     std::stringstream ss;
     ss << "(if ";
+    ss << visit (stmt.condition);
     ss << visit (stmt.then_branch);
 
     if (stmt.else_branch)
@@ -102,8 +103,7 @@ struct AstPrinterVisitor
   std::string
   operator() (const ExprBinary &expr) const
   {
-    return "(" + visit (expr.left) + " " + expr.op.lexeme + " "
-           + visit (expr.right) + ")";
+    return binary (expr);
   }
 
   std::string
@@ -116,6 +116,20 @@ struct AstPrinterVisitor
   operator() (const ExprAssign &expr) const
   {
     return "( assign " + expr.name.lexeme + visit (expr.value) + ")";
+  }
+
+  std::string
+  operator() (const ExprLogical &expr) const
+  {
+    return binary (expr);
+  }
+
+  template <typename BinaryExprType>
+  [[nodiscard]] std::string
+  binary (const BinaryExprType &expr) const
+  {
+    return "(" + visit (expr.left) + " " + expr.op.lexeme + " "
+           + visit (expr.right) + ")";
   }
 };
 

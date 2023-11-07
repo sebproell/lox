@@ -12,6 +12,7 @@ namespace lox
 struct ExprBinary;
 struct ExprGrouping;
 struct ExprLiteral;
+struct ExprLogical;
 struct ExprUnary;
 struct ExprVariable;
 struct ExprAssign;
@@ -22,8 +23,9 @@ struct ExprAssign;
  * in the variant, the recursive types are put into the Box helper type which
  * heap allocates memory.
  */
-using Expr = std::variant<ExprLiteral, ExprVariable, Box<ExprBinary>,
-                          Box<ExprUnary>, Box<ExprGrouping>, Box<ExprAssign> >;
+using Expr = std::variant<ExprLiteral, ExprVariable, Box<ExprLogical>,
+                          Box<ExprBinary>, Box<ExprUnary>, Box<ExprGrouping>,
+                          Box<ExprAssign> >;
 
 struct ExprLiteral
 {
@@ -33,6 +35,13 @@ struct ExprLiteral
 struct ExprVariable
 {
   Token name;
+};
+
+struct ExprLogical
+{
+  Expr left;
+  Expr right;
+  Token op;
 };
 
 struct ExprUnary

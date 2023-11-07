@@ -146,7 +146,7 @@ private:
   {
     // trick: parse the left-hand side as a value and figure out the target
     // afterwards
-    Expr expr = equality ();
+    Expr expr = expr_or ();
 
     if (match (TokenType::EQUAL))
       {
@@ -163,6 +163,32 @@ private:
       }
 
     // no assignment -> we already parsed the rest
+    return expr;
+  }
+
+  Expr
+  expr_or ()
+  {
+    Expr expr = expr_and ();
+    while (match (TokenType::OR))
+      {
+        Token op = previous ();
+        Expr right = expr_and ();
+        expr = ExprLogical{ expr, right, op };
+      }
+    return expr;
+  }
+
+  Expr
+  expr_and ()
+  {
+    Expr expr = equality ();
+    while (match (TokenType::AND))
+      {
+        Token op = previous ();
+        Expr right = equality ();
+        expr = ExprLogical{ expr, right, op };
+      }
     return expr;
   }
 

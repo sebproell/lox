@@ -296,6 +296,19 @@ struct InterpreterVisitor
     (*env)[expr.name] = value;
     return value;
   }
+
+  [[nodiscard]] Value
+  operator() (const ExprLogical &expr) const
+  {
+    Value left = evaluate (expr.left);
+
+    if (expr.op.type == TokenType::OR && is_truthy (left))
+      return left;
+    if (expr.op.type == TokenType::AND && !is_truthy (left))
+      return left;
+
+    return evaluate (expr.right);
+  }
 };
 
 namespace internal
