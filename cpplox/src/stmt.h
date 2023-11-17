@@ -13,9 +13,11 @@ struct StmtVar;
 struct StmtBlock;
 struct StmtIf;
 struct StmtWhile;
+struct StmtFunction;
+struct StmtReturn;
 
 using Stmt = std::variant<StmtExpr, StmtPrint, StmtVar, StmtBlock, Box<StmtIf>,
-                          Box<StmtWhile> >;
+                          Box<StmtWhile>, Box<StmtFunction>, StmtReturn>;
 
 struct StmtExpr
 {
@@ -31,6 +33,12 @@ struct StmtVar
 {
   Token name;
   std::optional<Expr> initializer;
+};
+
+struct StmtReturn
+{
+  Token keyword;
+  std::optional<Expr> value;
 };
 
 struct StmtBlock
@@ -50,4 +58,12 @@ struct StmtWhile
   Expr condition;
   Stmt body;
 };
+
+struct StmtFunction
+{
+  Token name;
+  std::vector<Token> params;
+  std::vector<Stmt> body;
+};
+
 } // namespace lox

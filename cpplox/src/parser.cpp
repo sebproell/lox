@@ -24,7 +24,6 @@ public:
     std::vector<Stmt> statements{};
     while (!is_at_end ())
       {
-        // TODO restore error handling
         statements.emplace_back (declaration ());
       }
     return statements;
@@ -50,6 +49,8 @@ private:
       {
         if (match (TokenType::VAR))
           return var_declaration ();
+        if (match (TokenType::FUN))
+          return fun_declaration ("function");
         return statement ();
       }
     catch (const ParseError &error)
@@ -75,6 +76,29 @@ private:
   }
 
   Stmt
+  fun_declaration (const std::string &kind)
+  {
+    Token name = consume (TokenType::IDENTIFIER, "Expect " + kind + " name.");
+
+    consume (TokenType::LEFT_PAREN, "Expect '(' after " + kind + " name.");
+    std::vector<Token> parameters{};
+    if (!check (TokenType::RIGHT_PAREN))
+      do
+        {
+          if (parameters.size () >= 255)
+            error (peek (), "Can't have more than 255 parameters.");
+          parameters.emplace_back (
+              consume (TokenType::IDENTIFIER, "Expect parameter name."));
+        }
+      while (match (TokenType::COMMA));
+    consume (TokenType::RIGHT_PAREN, "Expect ')' after parameters.");
+    consume (TokenType::LEFT_BRACE, "Expect '{' before " + kind + " body.");
+    std::vector<Stmt> body = until_end_of_block ();
+
+    return StmtFunction{ name, parameters, body };
+  }
+
+  Stmt
   statement ()
   {
     if (match (TokenType::FOR))
@@ -83,6 +107,8 @@ private:
       return if_statement ();
     if (match (TokenType::PRINT))
       return print_statement ();
+    if (match (TokenType::RETURN))
+      return return_statement ();
     if (match (TokenType::WHILE))
       return while_statement ();
     if (match (TokenType::LEFT_BRACE))
@@ -152,6 +178,18 @@ private:
     Expr value = expression ();
     consume (TokenType::SEMICOLON, "Expect ';' after value.");
     return StmtPrint{ std::move (value) };
+  }
+
+  Stmt
+  return_statement ()
+  {
+    Token keyword = previous ();
+    std::optional<Expr> value;
+    if (!check (TokenType::SEMICOLON))
+      value = expression ();
+
+    consume (TokenType::SEMICOLON, "Expect ';' after return value.");
+    return StmtReturn{ keyword, value };
   }
 
   Stmt
@@ -315,7 +353,41 @@ private:
         Expr right = unary ();
         return ExprUnary{ right, op };
       }
-    return primary ();
+    return call ();
+  }
+
+  Expr
+  call ()
+  {
+    Expr expr = primary ();
+    while (true)
+      {
+        if (match (TokenType::LEFT_PAREN))
+          expr = finish_call (expr);
+        else
+          break;
+      }
+    return expr;
+  }
+
+  Expr
+  finish_call (Expr callee)
+  {
+    std::vector<Expr> arguments{};
+    if (!check (TokenType::RIGHT_PAREN))
+      do
+        {
+          // This error exists for consistency with the C version.
+          if (arguments.size () >= 255)
+            error (peek (), "Can't have more than 255 arguments.");
+          arguments.emplace_back (expression ());
+        }
+      while (match (TokenType::COMMA));
+
+    Token paren
+        = consume (TokenType::RIGHT_PAREN, "Expect ')' after arguments.");
+
+    return ExprCall{ callee, paren, arguments };
   }
 
   Expr

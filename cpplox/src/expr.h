@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <variant>
+#include <vector>
 
 namespace lox
 {
@@ -16,6 +17,7 @@ struct ExprLogical;
 struct ExprUnary;
 struct ExprVariable;
 struct ExprAssign;
+struct ExprCall;
 
 /**
  * Expressions are implemented with the Visitor design pattern. In C++, this is
@@ -25,7 +27,7 @@ struct ExprAssign;
  */
 using Expr = std::variant<ExprLiteral, ExprVariable, Box<ExprLogical>,
                           Box<ExprBinary>, Box<ExprUnary>, Box<ExprGrouping>,
-                          Box<ExprAssign> >;
+                          Box<ExprAssign>, Box<ExprCall> >;
 
 struct ExprLiteral
 {
@@ -66,6 +68,13 @@ struct ExprAssign
 struct ExprGrouping
 {
   Expr expression;
+};
+
+struct ExprCall
+{
+  Expr callee;
+  Token paren; // for runtime error reporting
+  std::vector<Expr> arguments;
 };
 
 } // namespace lox

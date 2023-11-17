@@ -20,6 +20,18 @@ struct AstPrinterVisitor
     return this->operator() (*boxed_expr);
   }
 
+  template <typename T>
+  [[nodiscard]] std::string
+  visit (const std::vector<T> &list) const
+  {
+    std::stringstream ss;
+    for (const auto &entry : list)
+      {
+        ss << visit (entry);
+      }
+    return ss.str ();
+  }
+
   [[nodiscard]] std::string
   visit (const Expr &expr) const
   {
@@ -53,16 +65,17 @@ struct AstPrinterVisitor
   }
 
   std::string
+  operator() (const StmtReturn &stmt) const
+  {
+    return "(return " + (stmt.value ? visit (*stmt.value) : "") + ")";
+  }
+
+  std::string
   operator() (const StmtBlock &stmt) const
   {
     std::stringstream ss;
     ss << "(block ";
-
-    for (const auto &s : stmt.statements)
-      {
-        ss << visit (s);
-      }
-
+    ss << visit (stmt.statements);
     ss << ")";
     return ss.str ();
   }
@@ -89,6 +102,20 @@ struct AstPrinterVisitor
     ss << "(if ";
     ss << visit (stmt.condition);
     ss << visit (stmt.body);
+    ss << ")";
+    return ss.str ();
+  }
+
+  std::string
+  operator() (const StmtFunction &stmt) const
+  {
+    std::stringstream ss;
+    ss << "(fun " << (stmt.name.lexeme);
+    ss << "(";
+    for (const auto &t : stmt.params)
+      ss << t.lexeme;
+    ss << ")";
+    ss << "{" << visit (stmt.body) << "}";
     ss << ")";
     return ss.str ();
   }
@@ -127,6 +154,13 @@ struct AstPrinterVisitor
   operator() (const ExprAssign &expr) const
   {
     return "(assign " + expr.name.lexeme + visit (expr.value) + ")";
+  }
+
+  std::string
+  operator() (const ExprCall &expr) const
+  {
+    return "(call " + visit (expr.callee) + "(" + visit (expr.arguments)
+           + "))";
   }
 
   std::string

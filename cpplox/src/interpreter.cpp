@@ -2,16 +2,20 @@
 #include "environment.h"
 #include "error.h"
 #include "expr.h"
+#include "scope_exit.h"
 #include "stmt.h"
 #include "token.h"
 #include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <iostream>
+#include <stdexcept>
 #include <variant>
 
 namespace lox
 {
+
+struct InterpreterVisitor;
 
 /**
  * Various helpers when interpreting an AST.
@@ -57,6 +61,8 @@ is_equal (const Value &left, const Value &right) // NOLINT
   return std::visit (
       overloaded{ // Perform the C++ equality check if the two types match
                   is_equal_same_type{},
+                  // Two callables are assumed to be always unequal!
+                  [] (const Callable &, const Callable &) { return false; },
                   // Two non-matching types can never be equal
                   [] (const auto &, const auto &) { return false; } },
       left, right);
@@ -100,20 +106,39 @@ std::string
 stringify (const Value &value)
 {
   return std::visit (
-      overloaded{ [] (std::nullptr_t) -> std::string { return "nil"; },
-                  [] (double d) -> std::string {
-                    double i;
-                    double fractional_part = std::modf (d, &i);
-                    std::string s = std::to_string (d);
-                    if (fractional_part == 0.)
-                      return s.substr (0, s.find ("."));
-                    else
-                      return s;
-                  },
-                  [] (bool b) -> std::string { return b ? "true" : "false"; },
-                  [] (const std::string &s) { return s; } },
+      overloaded{
+          [] (std::nullptr_t) -> std::string { return "nil"; },
+          [] (double d) -> std::string {
+            double i;
+            double fractional_part = std::modf (d, &i);
+            std::string s = std::to_string (d);
+            if (fractional_part == 0.)
+              return s.substr (0, s.find ("."));
+            else
+              return s;
+          },
+          [] (bool b) -> std::string { return b ? "true" : "false"; },
+          [] (const std::string &s) { return s; },
+          [] (const Callable &) { return std::string{ "<callable>" }; } },
       value);
 }
+
+struct Function
+{
+  StmtFunction declaration;
+
+  const InterpreterVisitor &interpreter;
+
+  Value operator() (const std::vector<Value> &args) const;
+};
+
+/**
+ * A type used to throw when returning from a function.
+ */
+struct Return
+{
+  Value value{};
+};
 
 } // namespace
 
@@ -125,12 +150,21 @@ stringify (const Value &value)
 struct InterpreterVisitor
 {
 
+  InterpreterVisitor (Environment *globals) : env (globals), globals (globals)
+  {
+  }
+
   /**
    * The visitor may require the environment of variables.
    * This is a mutable pointer to allow changing the environment in different
    * scopes.
    */
   mutable Environment *env;
+
+  /**
+   * Always refers to the global environment the visitor was first created on.
+   */
+  Environment *globals;
 
   /**
    * Helper to resolve the boxed content. Forwards the call to the unboxed
@@ -182,7 +216,8 @@ struct InterpreterVisitor
   void
   operator() (const StmtBlock &stmt) const
   {
-    execute_block (stmt.statements);
+    Environment block_env (env);
+    execute_block (stmt.statements, block_env);
   }
 
   void
@@ -202,22 +237,32 @@ struct InterpreterVisitor
   }
 
   void
-  execute_block (const std::vector<Stmt> &stmts) const
+  execute_block (const std::vector<Stmt> &stmts, Environment &block_env) const
   {
-    // Set up a block environment and use that as the inner-most environment
-    // during evaluation of the block's statements. Make sure to restore the
-    // previous environment on all(!) exit paths via RAII.
-    const auto delete_block_env = [this, previous = env] (auto *block_env) {
-      delete block_env;
+    ScopeExit at_exit ([this, previous = env] () {
       // restore the old environment
-      this->env = previous;
-    };
-    std::unique_ptr<Environment, decltype (delete_block_env)> block_env (
-        new Environment (env), delete_block_env);
-    this->env = block_env.get ();
+      env = previous;
+    });
 
+    this->env = &block_env;
     for (const auto &stmt : stmts)
       execute (stmt);
+  }
+
+  void
+  operator() (const StmtFunction &stmt) const
+  {
+    env->define (stmt.name.lexeme,
+                 Callable (Function{ stmt, *this }, stmt.params.size ()));
+  }
+
+  void
+  operator() (const StmtReturn &stmt) const
+  {
+    Value value{};
+    if (stmt.value)
+      value = evaluate (*stmt.value);
+    throw Return{ value };
   }
 
   [[nodiscard]] Value
@@ -316,6 +361,31 @@ struct InterpreterVisitor
 
     return evaluate (expr.right);
   }
+
+  [[nodiscard]] Value
+  operator() (const ExprCall &expr) const
+  {
+    Value callee = evaluate (expr.callee);
+
+    std::vector<Value> arguments{};
+    arguments.reserve (expr.arguments.size ());
+    for (const Expr &arg : expr.arguments)
+      arguments.emplace_back (evaluate (arg));
+
+    if (!std::holds_alternative<Callable> (callee))
+      throw RunTimeError (expr.paren, "Can only call functions and classes.");
+    const auto &fn = std::get<Callable> (callee);
+
+    if (arguments.size () != fn.arity ())
+      {
+        throw RunTimeError (expr.paren,
+                            "Expected " + std::to_string (fn.arity ())
+                                + " arguments but got "
+                                + std::to_string (arguments.size ()) + ".");
+      }
+
+    return fn (arguments);
+  }
 };
 
 namespace internal
@@ -323,7 +393,8 @@ namespace internal
 class InterpreterImpl
 {
 public:
-  Environment env;
+  InterpreterImpl () { define_globals (global); }
+  Environment global;
 };
 } // namespace internal
 
@@ -354,11 +425,32 @@ Interpreter::interpret (const Stmt &stmt)
 {
   try
     {
-      InterpreterVisitor{ &pimpl->env }.execute (stmt);
+      InterpreterVisitor{ &pimpl->global }.execute (stmt);
     }
   catch (const RunTimeError &e)
     {
       run_time_error (e);
     }
+}
+
+Value
+Function::operator() (const std::vector<Value> &args) const
+{
+  Environment environment = Environment (interpreter.globals);
+  for (int i = 0; i < declaration.params.size (); i++)
+    {
+      environment.define (declaration.params[i].lexeme, args[i]);
+    }
+
+  try
+    {
+      interpreter.execute_block (declaration.body, environment);
+    }
+  catch (const Return &return_value)
+    {
+      return return_value.value;
+    }
+
+  return nullptr;
 }
 } // namespace lox
