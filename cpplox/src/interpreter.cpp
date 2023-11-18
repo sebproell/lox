@@ -129,6 +129,8 @@ struct Function
 
   const InterpreterVisitor &interpreter;
 
+  Environment closure;
+
   Value operator() (const std::vector<Value> &args) const;
 };
 
@@ -150,7 +152,7 @@ struct Return
 struct InterpreterVisitor
 {
 
-  InterpreterVisitor (Environment *globals) : env (globals), globals (globals)
+  InterpreterVisitor (Environment globals) : env (globals), globals (globals)
   {
   }
 
@@ -159,12 +161,12 @@ struct InterpreterVisitor
    * This is a mutable pointer to allow changing the environment in different
    * scopes.
    */
-  mutable Environment *env;
+  mutable Environment env;
 
   /**
    * Always refers to the global environment the visitor was first created on.
    */
-  Environment *globals;
+  Environment globals;
 
   /**
    * Helper to resolve the boxed content. Forwards the call to the unboxed
@@ -210,13 +212,13 @@ struct InterpreterVisitor
     if (stmt.initializer)
       value = evaluate (*stmt.initializer);
 
-    env->define (stmt.name.lexeme, value);
+    env.define (stmt.name.lexeme, value);
   }
 
   void
   operator() (const StmtBlock &stmt) const
   {
-    Environment block_env (env);
+    Environment block_env = Environment::enclose (env);
     execute_block (stmt.statements, block_env);
   }
 
@@ -244,7 +246,7 @@ struct InterpreterVisitor
       env = previous;
     });
 
-    this->env = &block_env;
+    this->env = block_env;
     for (const auto &stmt : stmts)
       execute (stmt);
   }
@@ -252,8 +254,9 @@ struct InterpreterVisitor
   void
   operator() (const StmtFunction &stmt) const
   {
-    env->define (stmt.name.lexeme,
-                 Callable (Function{ stmt, *this }, stmt.params.size ()));
+
+    env.define (stmt.name.lexeme,
+                Callable (Function{ stmt, *this, env }, stmt.params.size ()));
   }
 
   void
@@ -336,16 +339,14 @@ struct InterpreterVisitor
   [[nodiscard]] Value
   operator() (const ExprVariable &expr) const
   {
-    assert (env != nullptr);
-    return (*env)[expr.name];
+    return env[expr.name];
   }
 
   [[nodiscard]] Value
   operator() (const ExprAssign &expr) const
   {
-    assert (env != nullptr);
     Value value = evaluate (expr.value);
-    (*env)[expr.name] = value;
+    env[expr.name] = value;
     return value;
   }
 
@@ -425,7 +426,7 @@ Interpreter::interpret (const Stmt &stmt)
 {
   try
     {
-      InterpreterVisitor{ &pimpl->global }.execute (stmt);
+      InterpreterVisitor{ pimpl->global }.execute (stmt);
     }
   catch (const RunTimeError &e)
     {
@@ -436,7 +437,7 @@ Interpreter::interpret (const Stmt &stmt)
 Value
 Function::operator() (const std::vector<Value> &args) const
 {
-  Environment environment = Environment (interpreter.globals);
+  Environment environment = Environment::enclose (closure);
   for (int i = 0; i < declaration.params.size (); i++)
     {
       environment.define (declaration.params[i].lexeme, args[i]);

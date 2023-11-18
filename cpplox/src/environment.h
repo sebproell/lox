@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <memory>
 #include <string>
 
 #include "error.h"
@@ -8,12 +9,20 @@
 
 namespace lox
 {
+namespace internal
+{
+class EnvironmentImplementation;
+}
+
+/**
+ * A reference-counted container for symbols.
+ */
 class Environment
 {
 public:
-  Environment () = default;
+  Environment ();
 
-  Environment (Environment *enclosing);
+  static Environment enclose (Environment enclosing);
 
   void define (std::string name, Value value);
 
@@ -22,8 +31,7 @@ public:
   Value &operator[] (const Token &name);
 
 private:
-  std::map<std::string, Value> values;
-  Environment *enclosing{ nullptr };
+  std::shared_ptr<internal::EnvironmentImplementation> pimpl;
 };
 
 /**

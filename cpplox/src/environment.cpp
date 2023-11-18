@@ -3,6 +3,16 @@
 
 namespace lox
 {
+namespace internal
+{
+class EnvironmentImplementation
+{
+public:
+  std::optional<Environment> enclosing{};
+  std::map<std::string, Value> values;
+};
+} // namespace internal
+
 void
 define_globals (Environment &global)
 {
@@ -18,23 +28,34 @@ define_globals (Environment &global)
           0));
 }
 
-Environment::Environment (Environment *enclosing) : enclosing (enclosing) {}
+Environment::Environment ()
+    : pimpl (std::make_shared<internal::EnvironmentImplementation> ())
+{
+}
+
+Environment
+Environment::enclose (Environment enclosing)
+{
+  Environment env;
+  env.pimpl->enclosing = enclosing;
+  return env;
+}
 
 void
 Environment::define (std::string name, Value value)
 {
   // N.B. Use the access operator that will always overwrite.
-  values[name] = value;
+  pimpl->values[name] = value;
 }
 
 const Value &
 Environment::operator[] (const Token &name) const
 {
-  if (auto it = values.find (name.lexeme); it != values.end ())
+  if (auto it = pimpl->values.find (name.lexeme); it != pimpl->values.end ())
     return it->second;
 
-  if (enclosing != nullptr)
-    return (*enclosing)[name];
+  if (pimpl->enclosing)
+    return (*pimpl->enclosing)[name];
 
   throw RunTimeError (name, "Undefined variable '" + name.lexeme + "'.");
 }

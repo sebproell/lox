@@ -1,0 +1,12 @@
+// A naive implementation will print "global" and "block"
+// although "global" twice is correct.
+var a = "global";
+{
+  fun showA() {
+    print a;
+  }
+
+  showA();
+  var a = "block";
+  showA();
+}
