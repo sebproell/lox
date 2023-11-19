@@ -1,5 +1,6 @@
 #include "environment.h"
 #include <chrono>
+#include <utility>
 
 namespace lox
 {
@@ -45,7 +46,30 @@ void
 Environment::define (std::string name, Value value)
 {
   // N.B. Use the access operator that will always overwrite.
-  pimpl->values[name] = value;
+  pimpl->values[name] = std::move (value);
+}
+
+const Value &
+Environment::get_at (unsigned distance, const std::string &name) const
+{
+  Environment environment = *this;
+  for (int i = 0; i < distance; i++)
+    {
+      environment = *environment.pimpl->enclosing;
+    }
+
+  return environment.pimpl->values.at (name);
+}
+
+void
+Environment::assign_at (unsigned distance, const Token &name, Value value)
+{
+  Environment environment = *this;
+  for (int i = 0; i < distance; i++)
+    {
+      environment = *environment.pimpl->enclosing;
+    }
+  environment.pimpl->values[name.lexeme] = std::move (value);
 }
 
 const Value &

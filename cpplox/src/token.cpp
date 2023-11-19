@@ -83,9 +83,10 @@ keyword (const std::string &text)
   return TokenType::INVALID;
 }
 
-Token::Token (TokenType type, std::string lexeme, Literal literal, int line)
+Token::Token (TokenType type, std::string lexeme, Literal literal, int line,
+              int start)
     : type (type), lexeme (std::move (lexeme)), literal (std::move (literal)),
-      line (line)
+      line (line), start (start)
 {
 }
 
@@ -94,6 +95,12 @@ Token::to_string () const
 {
   // TODO see what we need here.
   return "{" + lox::to_string (type) + " " + lexeme + "}";
+}
+
+bool
+operator< (const Token &lhs, const Token &rhs)
+{
+  return lhs.start < rhs.start;
 }
 
 } // namespace lox

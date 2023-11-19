@@ -2,4 +2,5 @@ Checks: >-
   -*,
   modernize-*,
   bugprone-*,
+  performance-*,
   -modernize-use-trailing-return-type

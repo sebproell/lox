@@ -26,6 +26,11 @@ public:
 
   void define (std::string name, Value value);
 
+  [[nodiscard]] const Value &get_at (unsigned distance,
+                                     const std::string &name) const;
+
+  void assign_at (unsigned distance, const Token &name, Value value);
+
   [[nodiscard]] const Value &operator[] (const Token &name) const;
 
   Value &operator[] (const Token &name);

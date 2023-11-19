@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstddef>
 #include <iostream>
+#include <memory>
 #include <stdexcept>
 #include <variant>
 
@@ -113,7 +114,7 @@ stringify (const Value &value)
             double fractional_part = std::modf (d, &i);
             std::string s = std::to_string (d);
             if (fractional_part == 0.)
-              return s.substr (0, s.find ("."));
+              return s.substr (0, s.find ('.'));
             else
               return s;
           },
@@ -152,21 +153,19 @@ struct Return
 struct InterpreterVisitor
 {
 
-  InterpreterVisitor (Environment globals) : env (globals), globals (globals)
+  InterpreterVisitor (const Environment &globals)
+      : env (globals), globals (globals)
   {
   }
 
   /**
-   * The visitor may require the environment of variables.
-   * This is a mutable pointer to allow changing the environment in different
-   * scopes.
+   * Resolve a variable expression.
    */
-  mutable Environment env;
-
-  /**
-   * Always refers to the global environment the visitor was first created on.
-   */
-  Environment globals;
+  void
+  resolve (const Token &token, unsigned depth)
+  {
+    locals.emplace (token, depth);
+  }
 
   /**
    * Helper to resolve the boxed content. Forwards the call to the unboxed
@@ -339,14 +338,20 @@ struct InterpreterVisitor
   [[nodiscard]] Value
   operator() (const ExprVariable &expr) const
   {
-    return env[expr.name];
+    return look_up_variable (expr.name);
   }
 
   [[nodiscard]] Value
   operator() (const ExprAssign &expr) const
   {
     Value value = evaluate (expr.value);
-    env[expr.name] = value;
+
+    auto it = locals.find (expr.name);
+    if (it != locals.end ())
+      env.assign_at (it->second, expr.name, value);
+    else
+      globals[expr.name] = value;
+
     return value;
   }
 
@@ -387,33 +392,300 @@ struct InterpreterVisitor
 
     return fn (arguments);
   }
+
+private:
+  Value
+  look_up_variable (const Token &name) const
+  {
+    auto it = locals.find (name);
+    if (it != locals.end ())
+      return env.get_at (it->second, name.lexeme);
+    else
+      return globals[name];
+  }
+
+  /**
+   * The visitor may require the environment of variables.
+   * This is a mutable pointer to allow changing the environment in different
+   * scopes.
+   */
+  mutable Environment env;
+
+  /**
+   * Always refers to the global environment the visitor was first created
+   * on.
+   */
+  mutable Environment globals;
+
+  /**
+   * Store the depth information on where to look up a variable in the
+   * environment linked list.
+   */
+  std::map<Token, unsigned> locals;
 };
 
-namespace internal
+/**
+ * Resolve variables before interpretation.
+ */
+struct Resolver
 {
-class InterpreterImpl
-{
-public:
-  InterpreterImpl () { define_globals (global); }
-  Environment global;
+  Resolver (InterpreterVisitor &visitor) : interpreter (visitor) {}
+
+  /**
+   * Helper to resolve the boxed content. Forwards the call to the unboxed
+   * type T. Notaby, this works for boxed Stmt _and_ Expr variants.
+   */
+  template <typename T>
+  void
+  operator() (const Box<T> &boxed)
+  {
+    return this->operator() (*boxed);
+  }
+
+  void
+  resolve (const std::vector<Stmt> &statements)
+  {
+    for (const auto &stmt : statements)
+      resolve (stmt);
+  }
+
+  void
+  resolve (const Stmt &stmt)
+  {
+    std::visit (*this, stmt);
+  }
+
+  void
+  resolve (const Expr &expr)
+  {
+    std::visit (*this, expr);
+  }
+
+  void
+  operator() (const StmtBlock &stmt)
+  {
+    begin_scope ();
+    resolve (stmt.statements);
+    end_scope ();
+  }
+
+  void
+  operator() (const StmtExpr &stmt)
+  {
+    resolve (stmt.expression);
+  }
+
+  void
+  operator() (const StmtPrint &stmt)
+  {
+    resolve (stmt.expression);
+  }
+
+  void
+  operator() (const StmtVar &stmt)
+  {
+    declare (stmt.name);
+    if (stmt.initializer)
+      resolve (*stmt.initializer);
+    define (stmt.name);
+  }
+
+  void
+  operator() (const StmtIf &stmt)
+  {
+    resolve (stmt.condition);
+    resolve (stmt.then_branch);
+    if (stmt.else_branch)
+      resolve (*stmt.else_branch);
+  }
+
+  void
+  operator() (const StmtWhile &stmt)
+  {
+    resolve (stmt.condition);
+    resolve (stmt.body);
+  }
+
+  void
+  operator() (const StmtFunction &stmt)
+  {
+    // Declare and define, so that a function may refer to itself within its
+    // body.
+    declare (stmt.name);
+    define (stmt.name);
+
+    resolve_function (stmt);
+  }
+
+  void
+  operator() (const StmtReturn &stmt)
+  {
+    if (stmt.value)
+      resolve (*stmt.value);
+  }
+
+  void
+  operator() (const ExprBinary &expr)
+  {
+    resolve (expr.left);
+    resolve (expr.right);
+  }
+
+  void
+  operator() (const ExprGrouping &expr)
+  {
+    resolve (expr.expression);
+  }
+
+  void
+  operator() (const ExprLiteral &expr)
+  {
+    // nothing to do
+  }
+
+  void
+  operator() (const ExprLogical &expr)
+  {
+    resolve (expr.left);
+    resolve (expr.right);
+  }
+
+  void
+  operator() (const ExprUnary &expr)
+  {
+    resolve (expr.right);
+  }
+
+  void
+  operator() (const ExprVariable &expr)
+  {
+    if (!scopes.empty () && scopes.back ().count (expr.name.lexeme) == 1
+        && scopes.back ().at (expr.name.lexeme) == false)
+      error (expr.name, "Can't read local variable in its own initializer.");
+
+    resolve_local (expr, expr.name);
+  }
+
+  void
+  operator() (const ExprAssign &expr)
+  {
+    resolve (expr.value);
+    resolve_local (expr, expr.name);
+  }
+
+  void
+  operator() (const ExprCall &expr)
+  {
+    resolve (expr.callee);
+    for (const Expr &arg : expr.arguments)
+      resolve (arg);
+  }
+
+private:
+  void
+  begin_scope ()
+  {
+    scopes.emplace_back ();
+  }
+
+  void
+  end_scope ()
+  {
+    scopes.pop_back ();
+  }
+
+  void
+  declare (const Token &name)
+  {
+    if constexpr (debug)
+      std::cout << "Declaring variable " << name.lexeme << " at line "
+                << name.line << " at offset " << name.start << std::endl;
+
+    // If not in any scope, i.e. at global scope,
+    // nothing to do.
+    if (scopes.empty ())
+      return;
+
+    scopes.back ().emplace (name.lexeme, false);
+  }
+
+  void
+  define (const Token &name)
+  {
+    if constexpr (debug)
+      std::cout << "Defining variable " << name.lexeme << " at line "
+                << name.line << " at offset " << name.start << std::endl;
+    if (scopes.empty ())
+      return;
+    scopes.back ().at (name.lexeme) = true;
+  }
+
+  void
+  resolve_local (const Expr &expr, const Token &name)
+  {
+    for (int i = static_cast<int> (scopes.size ()) - 1; i >= 0; --i)
+      {
+        if (scopes[i].count (name.lexeme) == 1)
+          {
+            const unsigned depth = scopes.size () - 1 - i;
+            if constexpr (debug)
+              {
+                std::cout << "Resolved variable " << name.lexeme << " at line "
+                          << name.line << " at offset " << name.start
+                          << ": depth " << depth << std::endl;
+              }
+            interpreter.resolve (name, depth);
+            return;
+          }
+      }
+
+    if constexpr (debug)
+      {
+        std::cout << "Nothing to resolve for variable " << name.lexeme
+                  << " at line " << name.line << " at offset " << name.start
+                  << ": treat as global" << std::endl;
+      }
+  }
+
+  void
+  resolve_function (const StmtFunction &function)
+  {
+    begin_scope ();
+
+    for (const Token &param : function.params)
+      {
+        declare (param);
+        define (param);
+      }
+    resolve (function.body);
+
+    end_scope ();
+  }
+
+  InterpreterVisitor &interpreter;
+
+  //! Store the different scopes which contain variable names. The boolean
+  //! indicates whether the variable is initialized.
+  std::vector<std::map<std::string, bool> > scopes;
+
+  //! If true, trace the resolution process.
+  static constexpr bool debug{ false };
 };
-} // namespace internal
-
-Interpreter::Interpreter ()
-    : pimpl (std::make_unique<internal::InterpreterImpl> ())
-{
-}
-
-// Default the destructor here to use unique_ptr as pimpl.
-Interpreter::~Interpreter () = default;
 
 void
 Interpreter::interpret (const std::vector<Stmt> &program)
 {
+  Environment global;
+  define_globals (global);
+  InterpreterVisitor visitor{ global };
+  Resolver resolver{ visitor };
   try
     {
+      resolver.resolve (program);
+      if (had_error)
+        return;
       for (const auto &stmt : program)
-        interpret (stmt);
+        visitor.execute (stmt);
     }
   catch (const RunTimeError &e)
     {
@@ -424,14 +696,7 @@ Interpreter::interpret (const std::vector<Stmt> &program)
 void
 Interpreter::interpret (const Stmt &stmt)
 {
-  try
-    {
-      InterpreterVisitor{ pimpl->global }.execute (stmt);
-    }
-  catch (const RunTimeError &e)
-    {
-      run_time_error (e);
-    }
+  interpret (std::vector{ stmt });
 }
 
 Value

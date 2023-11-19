@@ -68,7 +68,8 @@ TokenType keyword (const std::string &text);
 
 struct Token
 {
-  Token (TokenType type, std::string lexeme, Literal literal, int line);
+  Token (TokenType type, std::string lexeme, Literal literal, int line,
+         int start);
 
   [[nodiscard]] std::string to_string () const;
 
@@ -80,6 +81,11 @@ struct Token
   std::optional<Literal> literal;
   //! Only for error information
   int line;
+  //! Offset of begin of token. Useful to uniquely identify a Token.
+  int start;
 };
+
+// Order tokens by their occurrence in the source.
+bool operator< (const Token &lhs, const Token &rhs);
 
 } // namespace lox
