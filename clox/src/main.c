@@ -14,10 +14,18 @@ main (int argc, const char **argv)
   init_chunk (&chunk);
 
   int constant = add_constant (&chunk, 1.23);
-  write_chunk (&chunk, OP_CONSTANT, 123);
-  write_chunk (&chunk, constant, 123);
+  int constant2 = add_constant (&chunk, 2.56);
+  int dummy_line = 123;
+  write_chunk (&chunk, OP_CONSTANT, dummy_line);
+  write_chunk (&chunk, constant, dummy_line);
+  write_chunk (&chunk, OP_NEGATE, dummy_line);
 
-  write_chunk (&chunk, OP_RETURN, 123);
+  write_chunk (&chunk, OP_CONSTANT, dummy_line);
+  write_chunk (&chunk, constant2, dummy_line);
+
+  write_chunk (&chunk, OP_MULTIPLY, dummy_line);
+
+  write_chunk (&chunk, OP_RETURN, dummy_line);
 
   interpret (&vm, &chunk);
 
