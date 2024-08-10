@@ -1,5 +1,6 @@
 #include "vm.h"
 #include "chunk.h"
+#include "compiler.h"
 #include "debug.h"
 #include "value.h"
 #include <stdio.h>
@@ -89,11 +90,10 @@ run (VM *vm)
 }
 
 InterpretResult
-interpret (VM *vm, Chunk *chunk)
+interpret (VM *vm, const char *source)
 {
-  vm->chunk = chunk;
-  vm->ip = vm->chunk->code;
-  return run (vm);
+  compile (source);
+  return INTERPRET_OK;
 }
 
 void
