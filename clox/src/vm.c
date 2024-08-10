@@ -36,6 +36,10 @@ run (VM *vm)
     }                                                                         \
   while (false)
 
+#ifdef DEBUG_TRACE_EXECUTION
+  printf ("== execution ==\n");
+#endif
+
   for (;;)
     {
 #ifdef DEBUG_TRACE_EXECUTION
@@ -92,8 +96,22 @@ run (VM *vm)
 InterpretResult
 interpret (VM *vm, const char *source)
 {
-  compile (source);
-  return INTERPRET_OK;
+  Chunk chunk;
+  init_chunk (&chunk);
+
+  if (!compile (source, &chunk))
+    {
+      free_chunk (&chunk);
+      return INTERPRET_COMPILE_ERROR;
+    }
+
+  vm->chunk = &chunk;
+  vm->ip = vm->chunk->code;
+
+  InterpretResult result = run (vm);
+
+  free_chunk (&chunk);
+  return result;
 }
 
 void
