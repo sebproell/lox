@@ -9,7 +9,9 @@ typedef struct
 {
   Chunk *chunk;
   uint8_t *ip;
+  // Stack starts out at index 0 and grows in positive direction.
   Value stack[STACK_MAX];
+  // The next free entry on the stack.
   Value *stack_top;
 } VM;
 
@@ -24,5 +26,3 @@ typedef enum
 void init_vm (VM *vm);
 void free_vm (VM *vm);
 InterpretResult interpret (VM *vm, const char *source);
-void push (VM *vm, Value value);
-Value pop (VM *vm);
