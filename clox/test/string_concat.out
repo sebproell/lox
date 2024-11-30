@@ -1,0 +1,23 @@
+== tokens ==
+[TOKEN_STRING "1"] [TOKEN_PLUS +] [TOKEN_STRING "abc"] [TOKEN_PLUS +] [TOKEN_STRING "def"] 
+== code ==
+0000    1 OP_CONSTANT         0 '1'
+0002    | OP_CONSTANT         1 'abc'
+0004    | OP_ADD
+0005    | OP_CONSTANT         2 'def'
+0007    | OP_ADD
+0008    2 OP_RETURN
+== execution ==
+          
+0000    1 OP_CONSTANT         0 '1'
+          [ 1 ]
+0002    | OP_CONSTANT         1 'abc'
+          [ 1 ][ abc ]
+0004    | OP_ADD
+          [ 1abc ]
+0005    | OP_CONSTANT         2 'def'
+          [ 1abc ][ def ]
+0007    | OP_ADD
+          [ 1abcdef ]
+0008    2 OP_RETURN
+1abcdef
