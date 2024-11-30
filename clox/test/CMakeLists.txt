@@ -18,4 +18,5 @@ endfunction()
 
 
 define_test("basic_arithmetic" --tokens --disassemble --trace_execution)
+define_test("boolean_logic" --tokens --disassemble --trace_execution)
 

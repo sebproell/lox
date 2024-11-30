@@ -1,0 +1,38 @@
+== tokens ==
+[TOKEN_BANG !] [TOKEN_LEFT_PAREN (] [TOKEN_LEFT_PAREN (] [TOKEN_NUMBER 2] [TOKEN_PLUS +] [TOKEN_NUMBER 3] [TOKEN_GREATER_EQUAL >=] [TOKEN_NUMBER 4] [TOKEN_RIGHT_PAREN )] [TOKEN_EQUAL_EQUAL ==] [TOKEN_BANG !] [TOKEN_NIL nil] [TOKEN_RIGHT_PAREN )] 
+== code ==
+0000    1 OP_CONSTANT         0 '2'
+0002    | OP_CONSTANT         1 '3'
+0004    | OP_ADD
+0005    | OP_CONSTANT         2 '4'
+0007    | OP_LESS
+0008    | OP_NOT
+0009    | OP_NIL
+0010    | OP_NOT
+0011    | OP_EQUAL
+0012    | OP_NOT
+0013    2 OP_RETURN
+== execution ==
+          
+0000    1 OP_CONSTANT         0 '2'
+          [ 2 ]
+0002    | OP_CONSTANT         1 '3'
+          [ 2 ][ 3 ]
+0004    | OP_ADD
+          [ 5 ]
+0005    | OP_CONSTANT         2 '4'
+          [ 5 ][ 4 ]
+0007    | OP_LESS
+          [ false ]
+0008    | OP_NOT
+          [ true ]
+0009    | OP_NIL
+          [ true ][ nil ]
+0010    | OP_NOT
+          [ true ][ true ]
+0011    | OP_EQUAL
+          [ true ]
+0012    | OP_NOT
+          [ false ]
+0013    2 OP_RETURN
+false

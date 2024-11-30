@@ -68,7 +68,7 @@ run (VM *vm)
 {
 #define READ_BYTE() (*vm->ip++)
 #define READ_CONSTANT() (vm->chunk->constants.values[READ_BYTE ()])
-#define BINARY_OP(value_type, op)                                             \
+#define BINARY_OP(result_value_type, op)                                      \
   do                                                                          \
     {                                                                         \
       if (!IS_NUMBER (peek (vm, 0)) || !IS_NUMBER (peek (vm, 1)))             \
@@ -78,7 +78,7 @@ run (VM *vm)
         }                                                                     \
       double b = AS_NUMBER (pop (vm));                                        \
       double a = AS_NUMBER (pop (vm));                                        \
-      push (vm, value_type (a op b));                                         \
+      push (vm, result_value_type (a op b));                                  \
     }                                                                         \
   while (false)
 
@@ -116,6 +116,19 @@ run (VM *vm)
           break;
         case OP_FALSE:
           push (vm, BOOL_VAL (false));
+          break;
+        case OP_EQUAL:
+          {
+            Value rhs = pop (vm);
+            Value lhs = pop (vm);
+            push (vm, BOOL_VAL (values_equal (lhs, rhs)));
+            break;
+          }
+        case OP_GREATER:
+          BINARY_OP (BOOL_VAL, >);
+          break;
+        case OP_LESS:
+          BINARY_OP (BOOL_VAL, <);
           break;
         case OP_ADD:
           BINARY_OP (NUMBER_VAL, +);

@@ -2,6 +2,23 @@
 #include "memory.h"
 #include <stdio.h>
 
+bool
+values_equal (Value lhs, Value rhs)
+{
+  if (lhs.type != rhs.type)
+    return false;
+  switch (lhs.type)
+    {
+    case VAL_BOOL:
+      return AS_BOOL (lhs) == AS_BOOL (rhs);
+    case VAL_NIL:
+      return true;
+    case VAL_NUMBER:
+      return (AS_NUMBER (lhs) == AS_NUMBER (rhs));
+      break;
+    }
+}
+
 void
 init_value_array (ValueArray *array)
 {
