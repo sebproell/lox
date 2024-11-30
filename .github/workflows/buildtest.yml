@@ -1,0 +1,30 @@
+name: buildtest
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  cpplox:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: configure
+      run: mkdir build && cd build && cmake ../cpplox/
+    - name: make
+      run: cd build && make
+    - name: test
+      run: cd build && ctest --output-on-failure -j 4
+
+  clox:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: configure
+      run: mkdir build && cd build && cmake ../clox/
+    - name: make
+      run: cd build && make
+    - name: test
+      run: cd build && ctest --output-on-failure -j 4
