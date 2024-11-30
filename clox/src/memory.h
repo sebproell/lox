@@ -11,6 +11,8 @@
   (type *)reallocate ((data), sizeof (type) * (old_count),                    \
                       sizeof (type) * (new_count))
 
+#define FREE(type, pointer) reallocate (pointer, sizeof (type), 0)
+
 #define FREE_ARRAY(type, pointer, old_count)                                  \
   reallocate (pointer, sizeof (type) * (old_count), 0)
 

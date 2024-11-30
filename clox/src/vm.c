@@ -74,11 +74,13 @@ void
 init_vm (VM *vm)
 {
   reset_stack (vm);
+  allocated_objs = NULL;
 }
 
 void
 free_vm (VM *vm)
 {
+  free_objects (allocated_objs);
 }
 
 static InterpretResult

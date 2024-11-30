@@ -11,7 +11,15 @@ typedef enum
 struct Obj
 {
   ObjType type;
+  // intrusive linked list
+  struct Obj *next;
 };
+
+// Linked list of all allocated objects.
+extern Obj *allocated_objs;
+
+// Free all objects in the linked list.
+void free_objects (Obj *obj_list);
 
 #define OBJ_TYPE(value) (AS_OBJ (value)->type)
 
