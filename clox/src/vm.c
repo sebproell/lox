@@ -1,5 +1,6 @@
 #include "vm.h"
 #include "chunk.h"
+#include "common.h"
 #include "compiler.h"
 #include "debug.h"
 #include "value.h"
@@ -22,6 +23,12 @@ static Value
 peek (VM *vm, int distance)
 {
   return vm->stack_top[-1 - distance];
+}
+
+static bool
+is_truthy (Value value)
+{
+  return !IS_NIL (value) && (!IS_BOOL (value) || AS_BOOL (value));
 }
 
 static void
@@ -75,23 +82,23 @@ run (VM *vm)
     }                                                                         \
   while (false)
 
-#ifdef DEBUG_TRACE_EXECUTION
-  printf ("== execution ==\n");
-#endif
+  if (is_option_set (OPT_TRACE_EXECUTION))
+    printf ("== execution ==\n");
 
   for (;;)
     {
-#ifdef DEBUG_TRACE_EXECUTION
-      printf ("          ");
-      for (Value *slot = vm->stack; slot < vm->stack_top; slot++)
+      if (is_option_set (OPT_TRACE_EXECUTION))
         {
-          printf ("[ ");
-          print_value (*slot);
-          printf (" ]");
+          printf ("          ");
+          for (Value *slot = vm->stack; slot < vm->stack_top; slot++)
+            {
+              printf ("[ ");
+              print_value (*slot);
+              printf (" ]");
+            }
+          printf ("\n");
+          disassemble_instruction (vm->chunk, (int)(vm->ip - vm->chunk->code));
         }
-      printf ("\n");
-      disassemble_instruction (vm->chunk, (int)(vm->ip - vm->chunk->code));
-#endif
       uint8_t instruction;
       switch (instruction = READ_BYTE ())
         {
@@ -101,6 +108,15 @@ run (VM *vm)
             push (vm, constant);
             break;
           }
+        case OP_NIL:
+          push (vm, NIL_VAL);
+          break;
+        case OP_TRUE:
+          push (vm, BOOL_VAL (true));
+          break;
+        case OP_FALSE:
+          push (vm, BOOL_VAL (false));
+          break;
         case OP_ADD:
           BINARY_OP (NUMBER_VAL, +);
           break;
@@ -112,6 +128,9 @@ run (VM *vm)
           break;
         case OP_DIVIDE:
           BINARY_OP (NUMBER_VAL, /);
+          break;
+        case OP_NOT:
+          push (vm, BOOL_VAL (!is_truthy (pop (vm))));
           break;
         case OP_NEGATE:
           {
@@ -153,7 +172,10 @@ interpret (VM *vm, const char *source)
   vm->chunk = &chunk;
   vm->ip = vm->chunk->code;
 
-  InterpretResult result = run (vm);
+  InterpretResult result = INTERPRET_OK;
+
+  if (!is_option_set (OPT_NO_EXECUTION))
+    result = run (vm);
 
   free_chunk (&chunk);
   return result;

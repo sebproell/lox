@@ -60,3 +60,5 @@ typedef struct
 
 void init_scanner (const char *source);
 Token scan_token ();
+
+const char *token_type_to_string (TokenType type);

@@ -3,13 +3,14 @@
 #include <stdlib.h>
 
 #include "chunk.h"
+#include "common.h"
 #include "compiler.h"
 #include "scanner.h"
 #include "value.h"
 
-#ifdef DEBUG_PRINT_CODE
 #include "debug.h"
-#endif
+
+#define DEBUG_PRINT_TOKENS
 
 typedef struct
 {
@@ -162,10 +163,6 @@ static void
 end_compiler ()
 {
   emit_return ();
-#ifdef DEBUG_PRINT_CODE
-  if (!parser.had_error)
-    disassemble_chunk (current_chunk (), "code");
-#endif
 }
 
 static void expression ();
@@ -200,6 +197,26 @@ binary ()
 }
 
 static void
+literal ()
+{
+  switch (parser.previous.type)
+    {
+    case TOKEN_FALSE:
+      emit_byte (OP_FALSE);
+      break;
+    case TOKEN_TRUE:
+      emit_byte (OP_TRUE);
+      break;
+    case TOKEN_NIL:
+      emit_byte (OP_NIL);
+      break;
+    default:
+      // unreachable
+      return;
+    }
+}
+
+static void
 number ()
 {
   double value = strtod (parser.previous.start, NULL);
@@ -227,6 +244,9 @@ unary ()
     case TOKEN_MINUS:
       emit_byte (OP_NEGATE);
       break;
+    case TOKEN_BANG:
+      emit_byte (OP_NOT);
+      break;
     default:
       assert (false);
       return;
@@ -252,7 +272,7 @@ ParseRule rules[] = {
   [TOKEN_SEMICOLON] = { NULL, NULL, PREC_NONE },
   [TOKEN_SLASH] = { NULL, binary, PREC_FACTOR },
   [TOKEN_STAR] = { NULL, binary, PREC_FACTOR },
-  [TOKEN_BANG] = { NULL, NULL, PREC_NONE },
+  [TOKEN_BANG] = { unary, NULL, PREC_NONE },
   [TOKEN_BANG_EQUAL] = { NULL, NULL, PREC_NONE },
   [TOKEN_EQUAL] = { NULL, NULL, PREC_NONE },
   [TOKEN_EQUAL_EQUAL] = { NULL, NULL, PREC_NONE },
@@ -266,17 +286,17 @@ ParseRule rules[] = {
   [TOKEN_AND] = { NULL, NULL, PREC_NONE },
   [TOKEN_CLASS] = { NULL, NULL, PREC_NONE },
   [TOKEN_ELSE] = { NULL, NULL, PREC_NONE },
-  [TOKEN_FALSE] = { NULL, NULL, PREC_NONE },
+  [TOKEN_FALSE] = { literal, NULL, PREC_NONE },
   [TOKEN_FOR] = { NULL, NULL, PREC_NONE },
   [TOKEN_FUN] = { NULL, NULL, PREC_NONE },
   [TOKEN_IF] = { NULL, NULL, PREC_NONE },
-  [TOKEN_NIL] = { NULL, NULL, PREC_NONE },
+  [TOKEN_NIL] = { literal, NULL, PREC_NONE },
   [TOKEN_OR] = { NULL, NULL, PREC_NONE },
   [TOKEN_PRINT] = { NULL, NULL, PREC_NONE },
   [TOKEN_RETURN] = { NULL, NULL, PREC_NONE },
   [TOKEN_SUPER] = { NULL, NULL, PREC_NONE },
   [TOKEN_THIS] = { NULL, NULL, PREC_NONE },
-  [TOKEN_TRUE] = { NULL, NULL, PREC_NONE },
+  [TOKEN_TRUE] = { literal, NULL, PREC_NONE },
   [TOKEN_VAR] = { NULL, NULL, PREC_NONE },
   [TOKEN_WHILE] = { NULL, NULL, PREC_NONE },
   [TOKEN_ERROR] = { NULL, NULL, PREC_NONE },
@@ -313,6 +333,19 @@ get_rule (TokenType type)
 bool
 compile (const char *source, Chunk *chunk)
 {
+  if (is_option_set (OPT_TOKENS))
+    {
+      printf ("== tokens ==\n");
+      init_scanner (source);
+      Token token;
+      while ((token = scan_token ()).type != TOKEN_EOF)
+        {
+          printf ("[%s %.*s] ", token_type_to_string (token.type),
+                  token.length, token.start);
+        }
+      printf ("\n");
+    }
+
   compiling_chunk = chunk;
 
   init_scanner (source);
@@ -323,6 +356,12 @@ compile (const char *source, Chunk *chunk)
   expression ();
   consume (TOKEN_EOF, "Expect end of expression.");
   end_compiler ();
+
+  if (is_option_set (OPT_DISASSEMBLE))
+    {
+      if (!parser.had_error)
+        disassemble_chunk (current_chunk (), "code");
+    }
 
   return !parser.had_error;
 }

@@ -1,11 +1,59 @@
-#include "chunk.h"
 #include "common.h"
-#include "debug.h"
 #include "vm.h"
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 VM vm;
+
+static void
+print_help ()
+{
+  printf ("Usage: clox [options] [path]\n");
+  printf ("Options:\n");
+  printf ("  --tokens\t\tPrint tokens\n");
+  printf ("  --disassemble\t\tDisassemble bytecode\n");
+  printf ("  --trace_execution\tTrace execution\n");
+  printf ("  -n, --no_execution\tDo not execute code\n");
+  printf ("  -h, --help\t\tPrint this help message\n");
+}
+
+static CommandLineOptions
+parse_options (int argc, char **argv, int *parsed_argc)
+{
+  struct option longopts[]
+      = { { "tokens", no_argument, 0, OPT_TOKENS },
+          { "disassemble", no_argument, 0, OPT_DISASSEMBLE },
+          { "trace_execution", no_argument, 0, OPT_TRACE_EXECUTION },
+          { "no_execution", no_argument, 0, OPT_NO_EXECUTION },
+          { "help", no_argument, 0, 'h' },
+          { 0, 0, 0, 0 } };
+  int longind, opt;
+  *parsed_argc = 0;
+  const char *optstring = "hn";
+  CommandLineOptions options = 0;
+  while ((opt = getopt_long (argc, argv, optstring, longopts, &longind)) != -1)
+    {
+      if (opt == 'h')
+        {
+          print_help ();
+          exit (0);
+        }
+      if (opt == '?')
+        {
+          print_help ();
+          exit (1);
+        }
+      if (opt == 'n')
+        {
+          opt = OPT_NO_EXECUTION;
+        }
+
+      options |= opt;
+      *parsed_argc += 1;
+    }
+  return options;
+}
 
 static void
 repl ()
@@ -69,17 +117,22 @@ run_file (const char *file)
 }
 
 int
-main (int argc, const char **argv)
+main (int argc, char **argv)
 {
+  int parsed_argc;
+  CommandLineOptions options = parse_options (argc, argv, &parsed_argc);
+  set_option (options);
+
   init_vm (&vm);
 
-  if (argc == 1)
+  int remaining_argc = argc - parsed_argc;
+  if (remaining_argc == 1)
     repl ();
-  else if (argc == 2)
-    run_file (argv[1]);
+  else if (remaining_argc == 2)
+    run_file (argv[parsed_argc + 1]);
   else
     {
-      fprintf (stderr, "Usage: clox [path]\n");
+      fprintf (stderr, "Usage: clox [options] [path]\n");
       exit (64);
     }
 

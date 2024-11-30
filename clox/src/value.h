@@ -20,7 +20,7 @@ typedef struct
 } Value;
 
 #define BOOL_VAL(value) ((Value){ .type = VAL_BOOL, { .boolean = value } })
-#define NIL_VAL ((Value){ .type = VAL_NIL, { .numebr = 0 } })
+#define NIL_VAL ((Value){ .type = VAL_NIL, { .number = 0 } })
 #define NUMBER_VAL(value) ((Value){ .type = VAL_NUMBER, { .number = value } })
 
 #define AS_BOOL(value) ((value).as.boolean)
